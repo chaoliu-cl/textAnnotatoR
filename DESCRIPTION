@@ -1,0 +1,46 @@
+Package: textAnnotatoR
+Type: Package
+Title: Interactive Text Annotation Tool with Shiny GUI
+Version: 0.1.0
+Date: 2024-10-25
+Authors@R: person("Chao Liu", email = "chaoliu@cedarville.edu", role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0002-9979-8272"))
+Description: A comprehensive text annotation tool built with Shiny. Provides an 
+    interactive graphical user interface for coding text documents,
+    managing code hierarchies, creating memos, and analyzing coding patterns.
+    Features include code co-occurrence analysis, visualization of coding patterns,
+    comparison of multiple coding sets, and export capabilities. Supports
+    collaborative qualitative research through standardized annotation formats
+    and analysis tools.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Depends: 
+    R (>= 3.5.0)
+Imports:
+    shiny (>= 1.7.0),
+    shinydashboard,
+    shinyjs,
+    shinyFiles,
+    data.tree,
+    jsonlite,
+    DT,
+    readtext,
+    magrittr,
+    tools,
+    utils,
+    stats,
+    grDevices,
+    graphics
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    covr,
+    mockery
+URL: https://github.com/yourusername/textAnnotatoR
+BugReports: https://github.com/yourusername/textAnnotatoR/issues
+Config/testthat/edition: 3
+Language: en-US
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+VignetteBuilder: knitr
