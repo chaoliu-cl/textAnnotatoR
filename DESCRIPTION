@@ -37,8 +37,8 @@ Suggests:
     rmarkdown,
     covr,
     mockery
-URL: https://github.com/yourusername/textAnnotatoR
-BugReports: https://github.com/yourusername/textAnnotatoR/issues
+URL: https://github.com/chaoliu-cl/textAnnotatoR, http://liu-chao.site/textAnnotatoR/
+BugReports: https://github.com/chaoliu-cl/textAnnotatoR/issues
 Config/testthat/edition: 3
 Language: en-US
 Roxygen: list(markdown = TRUE)

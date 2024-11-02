@@ -45,8 +45,9 @@ This package requires the following packages:
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/yourusername/textAnnotatoR}
-  \item Report bugs at \url{https://github.com/yourusername/textAnnotatoR/issues}
+  \item \url{https://github.com/chaoliu-cl/textAnnotatoR}
+  \item \url{http://liu-chao.site/textAnnotatoR/}
+  \item Report bugs at \url{https://github.com/chaoliu-cl/textAnnotatoR/issues}
 }
 
 }

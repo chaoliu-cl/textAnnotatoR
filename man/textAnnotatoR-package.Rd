@@ -10,8 +10,9 @@ A comprehensive text annotation tool built with Shiny. Provides an interactive g
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/yourusername/textAnnotatoR}
-  \item Report bugs at \url{https://github.com/yourusername/textAnnotatoR/issues}
+  \item \url{https://github.com/chaoliu-cl/textAnnotatoR}
+  \item \url{http://liu-chao.site/textAnnotatoR/}
+  \item Report bugs at \url{https://github.com/chaoliu-cl/textAnnotatoR/issues}
 }
 
 }
