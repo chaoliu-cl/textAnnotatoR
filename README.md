@@ -35,10 +35,10 @@ You can install the development version of textAnnotatoR from GitHub
 using:
 
 ``` r
-# Install remotes if you haven't already
-if (!require("remotes")) install.packages("remotes")
-
 # Install textAnnotatoR
+- From CRAN: 
+install.packages('textAnnotatoR')
+- From Github:
 remotes::install_github("chaoliu-cl/textAnnotatoR")
 ```
 
