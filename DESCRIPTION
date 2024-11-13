@@ -1,10 +1,10 @@
 Package: textAnnotatoR
 Type: Package
-Title: Interactive Text Annotation Tool with Shiny GUI
-Version: 0.1.2
+Title: Interactive Text Annotation Tool with 'shiny' GUI
+Version: 0.1.4
 Date: 2024-10-25
 Authors@R: person("Chao Liu", email = "chaoliu@cedarville.edu", role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0002-9979-8272"))
-Description: A comprehensive text annotation tool built with Shiny. Provides an 
+Description: A comprehensive text annotation tool built with 'shiny'. Provides an 
     interactive graphical user interface for coding text documents,
     managing code hierarchies, creating memos, and analyzing coding patterns.
     Features include code co-occurrence analysis, visualization of coding patterns,

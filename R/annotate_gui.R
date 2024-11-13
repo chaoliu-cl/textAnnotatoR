@@ -47,8 +47,8 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' annotate_gui()
+#' if(interactive()) {
+#'   annotate_gui()
 #' }
 #'
 #' @importFrom shiny runApp shinyApp fluidPage actionButton observeEvent renderUI
@@ -64,6 +64,9 @@
 #' @importFrom utils write.csv
 #'
 annotate_gui <- function() {
+  if (!interactive()) {
+    stop("annotate_gui() is only meant to be used in interactive R sessions")
+  }
   # Try to set up resource path safely
   tryCatch({
     # For development, try local path first
@@ -435,6 +438,7 @@ annotate_gui <- function() {
 
   server <- function(input, output, session) {
     rv <- reactiveValues(
+      data_dir = NULL,
       text = "",
       annotations = data.frame(
         start = integer(),
@@ -463,6 +467,16 @@ annotate_gui <- function() {
       comparison_data = NULL,
       comparison_results = NULL
     )
+
+    # Initialize directory with confirmation
+    observe({
+      if (is.null(rv$data_dir)) {
+        init_data_dir(session)
+      }
+    })
+
+    # Handle directory confirmation
+    handle_dir_confirmation(input, rv, session)
 
     # Initialize code tree properties in an observe block
     observe({
@@ -1001,7 +1015,13 @@ annotate_gui <- function() {
 
     # Save Project handler
     observeEvent(input$save_project, {
-      save_project_interactive(rv, input, session, roots)
+      if (is.null(rv$data_dir)) {
+        showNotification(
+          "Using temporary directory. Projects will not persist between sessions.",
+          type = "warning"
+        )
+      }
+      save_project_interactive(rv, input, session)
     })
 
     # Display selected save directory
@@ -2066,8 +2086,8 @@ annotate_gui <- function() {
                 ),
                 caption = "Raw Co-occurrence Counts") %>%
         DT::formatStyle(names(co_df)[-1],
-                    background = styleInterval(c(0, 2, 5, 10),
-                                               c('white', '#f7fbff', '#deebf7', '#9ecae1', '#3182bd')))
+                        background = styleInterval(c(0, 2, 5, 10),
+                                                   c('white', '#f7fbff', '#deebf7', '#9ecae1', '#3182bd')))
     })
 
     # Word Cloud button
@@ -2589,15 +2609,6 @@ NULL
 #' @param b Second value (default) to use if first is NULL
 #' @return Returns \code{a} if not NULL, otherwise returns \code{b}
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' x <- NULL
-#' y <- 5
-#' x %||% y  # Returns 5
-#'
-#' x <- 10
-#' x %||% y  # Returns 10
-#' }
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 #' Handle errors with custom messages
@@ -2614,38 +2625,33 @@ NULL
 #' @return Result of the expression or NULL if error occurs
 #'
 #' @importFrom shiny showNotification
-#'
-#' @examples
-#' \dontrun{
-#' # Basic usage
-#' result <- handle_error(
-#'   expr = { 1 + 1 },
-#'   success_msg = "Calculation completed"
-#' )
-#'
-#' # With error handling
-#' result <- handle_error(
-#'   expr = { 1 / 0 },
-#'   error_msg = "Division by zero detected",
-#'   finally_msg = "Operation finished"
-#' )
-#' }
-#'
 #' @keywords internal
 handle_error <- function(expr, success_msg = NULL, error_msg = NULL, finally_msg = NULL) {
+  is_shiny <- requireNamespace("shiny", quietly = TRUE) &&
+    exists("session") &&
+    !is.null(get0("session"))
+
+  notify <- function(msg, type = "message") {
+    if (is_shiny) {
+      shiny::showNotification(msg, type = type)
+    } else {
+      message(msg)
+    }
+  }
+
   tryCatch({
     result <- expr
     if (!is.null(success_msg)) {
-      showNotification(success_msg, type = "message")
+      notify(success_msg, "message")
     }
     return(result)
   }, error = function(e) {
     msg <- if (is.null(error_msg)) paste("Error:", e$message) else error_msg
-    showNotification(msg, type = "error")
+    notify(msg, "error")
     return(NULL)
   }, finally = {
     if (!is.null(finally_msg)) {
-      showNotification(finally_msg, type = "message")
+      notify(finally_msg, "message")
     }
   })
 }
@@ -2659,30 +2665,29 @@ handle_error <- function(expr, success_msg = NULL, error_msg = NULL, finally_msg
 #' @param rv ReactiveValues object containing project state
 #' @param input Shiny input values
 #' @param session Shiny session object
-#' @param volumes List of available storage volumes
-#'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' # In Shiny server function:
-#' observeEvent(input$save_button, {
-#'   save_project_interactive(rv, input, session, volumes)
-#' })
-#' }
 #' @keywords internal
-save_project_interactive <- function(rv, input, session, volumes) {
+save_project_interactive <- function(rv, input, session) {
+  # Get the project directory
+  project_dir <- get_project_dir(rv)
+
   showModal(modalDialog(
     title = "Save Project",
     textInput("project_name", "Project Name:",
               value = rv$current_project %||% ""),
-    # Use regular file input instead of shinyFilesButton
-    div(style = "margin: 10px 0;",
-        shinyDirButton("directory_select",
-                       label = "Choose Directory",
-                       title = "Select Directory to Save Project")
+    # Show current save location
+    tags$div(
+      style = "margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;",
+      tags$p(
+        tags$strong("Save Location: "),
+        if (!is.null(rv$data_dir)) {
+          "User directory (persistent storage)"
+        } else {
+          "Temporary directory (data will not persist between sessions)"
+        }
+      ),
+      tags$p(tags$small(project_dir))
     ),
-    verbatimTextOutput("selected_dir"),
     footer = tagList(
       modalButton("Cancel"),
       actionButton("confirm_save_project", "Save")
@@ -2690,7 +2695,22 @@ save_project_interactive <- function(rv, input, session, volumes) {
   ))
 }
 
-# Interactive annotated text save dialog
+#' Display interactive dialog for saving annotated text
+#'
+#' @description
+#' Creates and displays a modal dialog that allows users to save their annotated text
+#' in either HTML or plain text format. Provides options for filename and directory selection.
+#'
+#' @param rv ReactiveValues object containing the application state
+#' @param input Shiny input object
+#' @param session Shiny session object
+#' @param volumes List of available storage volumes for directory selection
+#'
+#' @return Invisible NULL, called for side effects
+#'
+#' @importFrom shiny showModal modalDialog textInput selectInput modalButton actionButton
+#' @importFrom shiny verbatimTextOutput
+#' @keywords internal
 save_annotated_text_interactive <- function(rv, input, session, volumes) {
   showModal(modalDialog(
     title = "Save Annotated Text",
@@ -2710,7 +2730,22 @@ save_annotated_text_interactive <- function(rv, input, session, volumes) {
   ))
 }
 
-# Interactive records save dialog
+#' Display interactive dialog for saving annotation records
+#'
+#' @description
+#' Creates and displays a modal dialog that allows users to save their annotation records
+#' in either CSV or JSON format. Provides options for filename and directory selection.
+#'
+#' @param rv ReactiveValues object containing the application state
+#' @param input Shiny input object
+#' @param session Shiny session object
+#' @param volumes List of available storage volumes for directory selection
+#'
+#' @return Invisible NULL, called for side effects
+#'
+#' @importFrom shiny showModal modalDialog textInput selectInput modalButton actionButton
+#' @importFrom shiny verbatimTextOutput
+#' @keywords internal
 save_records_interactive <- function(rv, input, session, volumes) {
   showModal(modalDialog(
     title = "Save Records",
@@ -2741,14 +2776,6 @@ save_records_interactive <- function(rv, input, session, volumes) {
 #' @param roots List of root directories for file selection
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' # In Shiny server function:
-#' observeEvent(input$load_button, {
-#'   load_project_interactive(rv, input, session, roots)
-#' })
-#' }
 #' @keywords internal
 load_project_interactive <- function(rv, input, session, roots) {
   showModal(modalDialog(
@@ -2768,7 +2795,17 @@ load_project_interactive <- function(rv, input, session, roots) {
   ))
 }
 
-# Helper function to get available volumes on Windows
+#' Get available storage volumes on Windows
+#'
+#' @description
+#' Creates a closure that returns a named vector of available Windows drive letters
+#' and their corresponding paths. Checks for the existence of drives from A: to Z:
+#' (excluding C: which is handled separately).
+#'
+#' @return Function that returns named character vector of available drives
+#'
+#' @importFrom stats setNames
+#' @keywords internal
 getVolumes <- function() {
   function() {
     volumes <- c("C:" = "C:/")
@@ -2800,28 +2837,6 @@ getVolumes <- function() {
 #'     \item timestamp: Time the action was created
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' # Create an add annotation action
-#' action <- create_action(
-#'   type = "add_annotation",
-#'   data = list(
-#'     start = 1,
-#'     end = 10,
-#'     code = "important"
-#'   )
-#' )
-#'
-#' # Create a merge codes action
-#' merge_action <- create_action(
-#'   type = "merge_codes",
-#'   data = list(
-#'     old_codes = c("code1", "code2"),
-#'     new_code = "merged_code"
-#'   )
-#' )
-#' }
-#'
 #' @keywords internal
 create_action <- function(type, data, reverse_data = NULL) {
   list(
@@ -2837,21 +2852,6 @@ create_action <- function(type, data, reverse_data = NULL) {
 #' @param rv Reactive values object
 #' @param action Action to add
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Initialize reactive values
-#' rv <- reactiveValues(
-#'   action_history = list(),
-#'   action_index = 0
-#' )
-#'
-#' # Create and add an action
-#' action <- create_action(
-#'   type = "add_annotation",
-#'   data = list(start = 1, end = 10, code = "example")
-#' )
-#' add_action(rv, action)
-#' }
 add_action <- function(rv, action) {
   # Remove any future actions if we're not at the end
   if (rv$action_index < length(rv$action_history)) {
@@ -2874,19 +2874,6 @@ add_action <- function(rv, action) {
 #' @param reverse Logical indicating whether to reverse the action
 #'
 #' @return Invisible rv (ReactiveValues object)
-#'
-#' @examples
-#' \dontrun{
-#' # Create and apply an action
-#' action <- create_action(
-#'   type = "add_annotation",
-#'   data = list(start = 1, end = 10, code = "code1")
-#' )
-#' apply_action(rv, action)
-#'
-#' # Reverse the action
-#' apply_action(rv, action, reverse = TRUE)
-#' }
 #'
 #' @keywords internal
 apply_action <- function(rv, action, reverse = FALSE) {
@@ -2966,20 +2953,6 @@ apply_action <- function(rv, action, reverse = FALSE) {
 #' @param node Root node of the code hierarchy (data.tree Node object)
 #'
 #' @return Character vector containing all code names in the hierarchy
-#'
-#' @examples
-#' \dontrun{
-#' # Create a simple code hierarchy
-#' root <- Node$new("Root")
-#' theme1 <- root$AddChild("Theme1")
-#' theme1$AddChild("Code1")
-#' theme1$AddChild("Code2")
-#'
-#' # Get all code names
-#' codes <- get_code_names(root)
-#' print(codes)  # c("Root", "Theme1", "Code1", "Code2")
-#' }
-#'
 #' @keywords internal
 get_code_names <- function(node) {
   if (node$isLeaf) {
@@ -2989,46 +2962,29 @@ get_code_names <- function(node) {
   }
 }
 
-#' Save project state to file
+#' Save and manage project state
 #'
 #' @description
-#' Saves the current project state including text, annotations, codes, code tree,
-#' and other metadata to an RDS file. Creates the projects directory if it doesn't exist.
+#' Saves the current state of a text annotation project, including annotations,
+#' codes, and memos. Creates necessary directories and handles file operations
+#' safely.
 #'
-#' @param state List containing project state elements:
+#' @param state List containing project components:
 #'   \itemize{
-#'     \item text: Character string of the current text
+#'     \item text: Original text content
 #'     \item annotations: Data frame of annotations
-#'     \item codes: Character vector of codes
-#'     \item code_tree: Node object representing code hierarchy
-#'     \item code_colors: Named vector of code colors
-#'     \item memos: List of memos
-#'     \item code_descriptions: List of code descriptions
+#'     \item codes: Vector of code names
+#'     \item code_tree: Hierarchical organization of codes
+#'     \item code_colors: Color assignments for codes
+#'     \item memos: List of annotation memos
 #'   }
-#' @param filename Character string specifying the filename for saving
+#' @param filename Character string specifying the output file name
 #'
-#' @return Invisible NULL. Called for side effect of saving project state.
+#' @return Invisible NULL, called for side effect of saving project state
 #'
-#' @examples
-#' \dontrun{
-#' state <- list(
-#'   text = "Sample text",
-#'   annotations = data.frame(
-#'     start = 1,
-#'     end = 5,
-#'     code = "code1",
-#'     stringsAsFactors = FALSE
-#'   ),
-#'   codes = "code1",
-#'   code_tree = Node$new("Root"),
-#'   code_colors = c(code1 = "#FF0000"),
-#'   memos = list(),
-#'   code_descriptions = list()
-#' )
-#' save_project_state(state, "my_project")
-#' }
+#' @importFrom utils saveRDS
+#' @importFrom tools file_path_sans_ext
 #'
-#' @importFrom utils packageVersion
 #' @keywords internal
 save_project_state <- function(state, filename) {
   # Create the projects directory if it doesn't exist
@@ -3063,18 +3019,6 @@ save_project_state <- function(state, filename) {
 #' Creates the directory if it doesn't exist.
 #'
 #' @return Character string containing the project directory path, or NULL if creation fails
-#'
-#' @examples
-#' \dontrun{
-#' # Get project directory
-#' project_dir <- get_project_dir()
-#'
-#' # Check if directory exists
-#' if (!is.null(project_dir)) {
-#'   list.files(project_dir)
-#' }
-#' }
-#'
 #' @importFrom shiny showNotification
 #' @keywords internal
 get_project_dir <- function() {
@@ -3104,17 +3048,6 @@ get_project_dir <- function() {
 #'
 #' @importFrom data.tree as.Node
 #' @importFrom utils packageVersion
-#'
-#' @examples
-#' \dontrun{
-#' # Load a project
-#' project_state <- load_project_state("project_name")
-#'
-#' # Check loaded components
-#' str(project_state$text)
-#' str(project_state$annotations)
-#' }
-#'
 #' @keywords internal
 load_project_state <- function(filename) {
   # Add .rds extension if not present
@@ -3162,22 +3095,6 @@ load_project_state <- function(filename) {
 #' @param session The current Shiny session
 #' @return Invisible NULL
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # In a Shiny server function:
-#' server <- function(input, output, session) {
-#'   rv <- reactiveValues(
-#'     text = "",
-#'     annotations = data.frame(),
-#'     codes = character(),
-#'     code_tree = Node$new("Root")
-#'   )
-#'
-#'   observeEvent(input$load_button, {
-#'     load_selected_project(rv, input, session)
-#'   })
-#' }
-#' }
 load_selected_project <- function(rv, input, session, project_name) {
   project_state <- load_project_state(paste0(project_name, ".rds"))
   if (!is.null(project_state)) {
@@ -3263,17 +3180,6 @@ update_text_display <- function(rv) {
 #' @param new_memo Character string containing memo text to append
 #'
 #' @return Character string of combined memo text
-#'
-#' @examples
-#' \dontrun{
-#' # Combine non-empty memos
-#' concatenate_memos("First note", "Second note")
-#' # Returns: "First note; Second note"
-#'
-#' # Handle empty existing memo
-#' concatenate_memos("", "New note")
-#' # Returns: "New note"
-#' }
 #' @keywords internal
 concatenate_memos <- function(existing_memo, new_memo) {
   if (existing_memo == "") {
@@ -3298,20 +3204,6 @@ concatenate_memos <- function(existing_memo, new_memo) {
 #'   }
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' # Create HTML with annotations
-#' rv <- list(
-#'   text = "Sample text",
-#'   annotations = data.frame(
-#'     start = 1, end = 6,
-#'     code = "code1"
-#'   ),
-#'   code_colors = c(code1 = "#FF0000")
-#' )
-#' save_as_html("output.html", rv)
-#' }
 #' @keywords internal
 save_as_html <- function(filename, rv) {
   # Get the current state of the text display
@@ -3348,18 +3240,6 @@ save_as_html <- function(filename, rv) {
 #'   }
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' rv <- list(
-#'   text = "Sample text",
-#'   annotations = data.frame(
-#'     start = 1, end = 6,
-#'     code = "code1"
-#'   )
-#' )
-#' save_as_text("output.txt", rv)
-#' }
 #' @keywords internal
 save_as_text <- function(filename, rv) {
   # Get the annotated text
@@ -3385,32 +3265,6 @@ save_as_text <- function(filename, rv) {
 #'   }
 #'
 #' @return Character string containing formatted text with code markers
-#'
-#' @examples
-#' \dontrun{
-#' # Simple example with one annotation
-#' text <- "This is a sample text"
-#' annotations <- data.frame(
-#'   start = 1,
-#'   end = 4,
-#'   code = "code1",
-#'   stringsAsFactors = FALSE
-#' )
-#' result <- create_plain_text_annotations(text, annotations)
-#' # Result will be: "[code1: This] is a sample text"
-#'
-#' # Example with multiple annotations
-#' text <- "The quick brown fox"
-#' annotations <- data.frame(
-#'   start = c(1, 10),
-#'   end = c(3, 15),
-#'   code = c("article", "adjective"),
-#'   stringsAsFactors = FALSE
-#' )
-#' result <- create_plain_text_annotations(text, annotations)
-#' # Result will be: "[article: The] quick [adjective: brown fox]"
-#' }
-#'
 #' @keywords internal
 create_plain_text_annotations <- function(text, annotations) {
   if (nrow(annotations) == 0) {
@@ -3456,14 +3310,6 @@ create_plain_text_annotations <- function(text, annotations) {
 #' @param session Shiny session object
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' # In Shiny server:
-#' observeEvent(input$new_project, {
-#'   create_new_project(rv, session)
-#' })
-#' }
 #' @keywords internal
 create_new_project <- function(rv, session) {
   rv$text <- ""
@@ -3512,20 +3358,12 @@ create_new_project <- function(rv, session) {
 #'
 #' @importFrom graphics par barplot
 #' @importFrom grDevices recordPlot
-#'
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   start = c(1, 10, 20),
-#'   end = c(5, 15, 25),
-#'   code = c("code1", "code2", "code1")
-#' )
-#' plot <- generate_code_frequency_plot(annotations)
-#' print(plot)
-#' }
-#'
 #' @keywords internal
 generate_code_frequency_plot <- function(annotations) {
+  # Save current par settings and restore on exit
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+
   code_freq <- table(annotations$code)
   code_freq_sorted <- sort(code_freq, decreasing = TRUE)
 
@@ -3566,18 +3404,6 @@ generate_code_frequency_plot <- function(annotations) {
 #' @importFrom graphics par plot points text lines image axis
 #' @importFrom grDevices rgb colorRampPalette recordPlot
 #' @importFrom stats cor
-#'
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   start = c(1, 5, 10),
-#'   end = c(8, 15, 20),
-#'   code = c("code1", "code2", "code1")
-#' )
-#' results <- generate_code_co_occurrence_analysis(annotations)
-#' print(results$summary)
-#' }
-#'
 #' @keywords internal
 generate_code_co_occurrence_analysis <- function(annotations) {
   # Get unique codes
@@ -3635,6 +3461,10 @@ generate_code_co_occurrence_analysis <- function(annotations) {
 
   # Generate network visualization
   network_plot <- function() {
+    # Save current par settings and restore on exit
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+
     if (n_codes <= 1) {
       plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1),
            main = if(n_codes == 0) "No codes available" else "Only one code present")
@@ -3679,6 +3509,10 @@ generate_code_co_occurrence_analysis <- function(annotations) {
 
   # Heatmap plot function
   heatmap_plot <- function() {
+    # Save current par settings and restore on exit
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+
     if (n_codes == 0) {
       plot(1, type = "n", xlab = "", ylab = "",
            main = "No codes available for heatmap")
@@ -3732,11 +3566,6 @@ generate_code_co_occurrence_analysis <- function(annotations) {
 #' @importFrom graphics plot text
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' text <- "This is a sample text with repeated words. Sample text for visualization."
-#' cloud <- generate_word_cloud(text)
-#' }
 generate_word_cloud <- function(text) {
   words <- unlist(strsplit(tolower(text), "\\W+"))
   word_freq <- sort(table(words[nchar(words) > 3]), decreasing = TRUE)
@@ -3782,16 +3611,6 @@ generate_word_cloud <- function(text) {
 #'   }
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' text <- "This is a sample text.\nIt has two paragraphs."
-#' annotations <- data.frame(
-#'   start = c(1, 10),
-#'   end = c(4, 15),
-#'   code = c("code1", "code2")
-#' )
-#' summary <- generate_text_summary(text, annotations)
-#' }
 generate_text_summary <- function(text, annotations) {
   # Count paragraphs (sequences separated by blank lines)
   paragraphs <- strsplit(text, "\n")[[1]]
@@ -3821,19 +3640,6 @@ generate_text_summary <- function(text, annotations) {
 #' @return Updated node with new theme added
 #'
 #' @importFrom data.tree Node
-#'
-#' @examples
-#' \dontrun{
-#' # Create root node
-#' root <- Node$new("Root")
-#'
-#' # Add a new theme
-#' root <- add_theme(root, "Methods", "Research methodology codes")
-#'
-#' # Add a sub-theme
-#' root <- add_theme(root, "Qualitative Methods", "Qualitative research approaches")
-#' }
-#'
 #' @keywords internal
 add_theme <- function(node, theme_name, description = "") {
   # Check if theme already exists
@@ -3867,16 +3673,6 @@ add_theme <- function(node, theme_name, description = "") {
 #'
 #' @importFrom jsonlite fromJSON
 #' @importFrom utils read.csv
-#'
-#' @examples
-#' \dontrun{
-#' # Process a CSV file
-#' annotations_csv <- process_comparison_file("annotations.csv")
-#'
-#' # Process a JSON file
-#' annotations_json <- process_comparison_file("annotations.json")
-#' }
-#'
 #' @keywords internal
 process_comparison_file <- function(filepath) {
   ext <- tolower(tools::file_ext(filepath))
@@ -3938,21 +3734,6 @@ process_comparison_file <- function(filepath) {
 #'   }
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Create sample annotation sets
-#' annotations1 <- data.frame(
-#'   start = c(1, 10),
-#'   end = c(5, 15),
-#'   code = c("code1", "code2")
-#' )
-#' annotations2 <- data.frame(
-#'   start = c(2, 12),
-#'   end = c(6, 18),
-#'   code = c("code1", "code3")
-#' )
-#' results <- generate_comparison_analysis(list(annotations1, annotations2))
-#' }
 generate_comparison_analysis <- function(annotations_list) {
   if (!is.list(annotations_list) || length(annotations_list) < 2) {
     stop("Need at least two annotation sets for comparison")
@@ -4056,9 +3837,29 @@ generate_comparison_analysis <- function(annotations_list) {
   ))
 }
 
-#' Helper function to calculate co-occurrences
-#' @param annotations Data frame of annotations
-#' @return Table of co-occurrence frequencies
+#' Calculate code co-occurrences in annotations
+#'
+#' @description
+#' Analyzes text annotations to identify and count instances where different codes
+#' overlap or co-occur in the same text regions. Handles edge cases and provides
+#' error-safe operation.
+#'
+#' @param annotations Data frame containing annotations with columns:
+#'   \itemize{
+#'     \item start: numeric, starting position of annotation
+#'     \item end: numeric, ending position of annotation
+#'     \item code: character, code identifier
+#'   }
+#'
+#' @return Table object containing frequencies of code pairs that co-occur,
+#'         with code pair names as "code1 & code2"
+#'
+#' @details
+#' Co-occurrences are identified by finding overlapping text regions between
+#' different code annotations. The function sorts annotations by position and
+#' checks for overlaps between each pair of annotations.
+#'
+#' @keywords internal
 calculate_co_occurrences <- function(annotations) {
   if (!is.data.frame(annotations) || nrow(annotations) <= 1) {
     return(table(character(0)))
@@ -4088,9 +3889,32 @@ calculate_co_occurrences <- function(annotations) {
   })
 }
 
-#' Helper function to calculate transitions
-#' @param annotations Data frame of annotations
-#' @return List of transitions
+#' Calculate transitions between consecutive codes
+#'
+#' @description
+#' Analyzes the sequence of code applications to identify transitions between
+#' consecutive codes in the text. Creates a list of code pairs representing
+#' each transition from one code to another.
+#'
+#' @param annotations Data frame containing annotations with columns:
+#'   \itemize{
+#'     \item start: numeric, starting position of annotation
+#'     \item end: numeric, ending position of annotation
+#'     \item code: character, code identifier
+#'   }
+#'
+#' @return List where each element is a named vector containing:
+#'   \itemize{
+#'     \item from: Character string of the source code
+#'     \item to: Character string of the target code
+#'   }
+#'
+#' @details
+#' Transitions are identified by sorting annotations by position and then
+#' analyzing consecutive pairs of codes. The function handles edge cases
+#' and provides error-safe operation.
+#'
+#' @keywords internal
 calculate_transitions <- function(annotations) {
   if (!is.data.frame(annotations) || nrow(annotations) <= 1) {
     return(list())
@@ -4129,26 +3953,6 @@ calculate_transitions <- function(annotations) {
 #'     \item shared_codes: Character vector of codes used across strategies
 #'     \item usage_matrix: Matrix showing code usage across strategies
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' strategy1 <- list(
-#'   coverage = list(
-#'     distribution = list(
-#'       frequencies = c(code1 = 2, code2 = 1)
-#'     )
-#'   )
-#' )
-#' strategy2 <- list(
-#'   coverage = list(
-#'     distribution = list(
-#'       frequencies = c(code2 = 2, code3 = 1)
-#'     )
-#'   )
-#' )
-#' comparison <- compare_codes(list(strategy1, strategy2))
-#' }
-#'
 #' @keywords internal
 compare_codes <- function(coding_strategies) {
   tryCatch({
@@ -4196,26 +4000,6 @@ compare_codes <- function(coding_strategies) {
 #'     \item total_overlaps_range: Range of total overlaps across strategies
 #'     \item unique_pairs_range: Range of unique code pairs across strategies
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' strategy1 <- list(
-#'   co_occurrences = list(
-#'     combinations = list(
-#'       frequencies = c("code1-code2" = 2)
-#'     )
-#'   )
-#' )
-#' strategy2 <- list(
-#'   co_occurrences = list(
-#'     combinations = list(
-#'       frequencies = c("code2-code3" = 1)
-#'     )
-#'   )
-#' )
-#' results <- compare_overlaps(list(strategy1, strategy2))
-#' }
-#'
 #' @keywords internal
 compare_overlaps <- function(coding_strategies) {
   tryCatch({
@@ -4262,16 +4046,6 @@ compare_overlaps <- function(coding_strategies) {
 #'     \item density: List containing overall density metrics
 #'     \item distribution: List containing code frequencies and positions
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   start = c(1, 5, 20),
-#'   end = c(3, 8, 25),
-#'   code = c("code1", "code2", "code1")
-#' )
-#' results <- analyze_coverage(annotations)
-#' }
 #'
 #' @keywords internal
 analyze_coverage <- function(annotations) {
@@ -4418,15 +4192,6 @@ analyze_code_patterns <- function(annotations) {
 #'   }
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   start = c(1, 5, 10),
-#'   end = c(8, 15, 20),
-#'   code = c("code1", "code2", "code1")
-#' )
-#' results <- analyze_co_occurrences(annotations)
-#' }
 analyze_co_occurrences <- function(annotations) {
   if (!is.data.frame(annotations) || nrow(annotations) <= 1) {
     return(list(
@@ -4494,16 +4259,6 @@ analyze_co_occurrences <- function(annotations) {
 #'     \item transitions: List of transitions between consecutive codes
 #'     \item patterns: List of identified repeated code sequences
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   start = c(1, 10, 20),
-#'   end = c(5, 15, 25),
-#'   code = c("code1", "code2", "code1")
-#' )
-#' results <- analyze_sequences(annotations)
-#' }
 #' @keywords internal
 analyze_sequences <- function(annotations) {
   if (!is.data.frame(annotations) || nrow(annotations) <= 1) {
@@ -4547,6 +4302,33 @@ analyze_sequences <- function(annotations) {
 }
 
 #' Compare coding patterns between different coders
+#'
+#' @description
+#' Analyzes and compares coding patterns between different coders by examining
+#' various aspects including coverage, code application patterns, combinations,
+#' and sequences.
+#'
+#' @param coding_strategies List of coding strategies, where each strategy contains:
+#'   \itemize{
+#'     \item coverage: List containing density and distribution information
+#'     \item code_patterns: List of code application patterns
+#'     \item combinations: List of code combination patterns
+#'     \item sequences: List of code sequence patterns
+#'   }
+#'
+#' @return List containing comparison results:
+#'   \itemize{
+#'     \item coverage_differences: Analysis of coding density variations
+#'     \item code_differences: Analysis of code application differences
+#'     \item combination_differences: Analysis of code combination patterns
+#'     \item sequence_differences: Analysis of code sequence patterns
+#'   }
+#'
+#' @details
+#' The function performs multiple comparisons with error handling for each aspect
+#' of coding patterns. Returns descriptive messages when analysis cannot be
+#' performed due to insufficient data.
+#'
 #' @keywords internal
 compare_patterns <- function(coding_strategies) {
   if (length(coding_strategies) < 2) {
@@ -4631,20 +4413,6 @@ compare_patterns <- function(coding_strategies) {
 #'
 #' @importFrom graphics par barplot text title
 #' @importFrom grDevices recordPlot
-#'
-#' @examples
-#' \dontrun{
-#' # Create sample comparison results
-#' results <- generate_comparison_analysis(list(
-#'   annotations1 = data.frame(start = c(1, 5), end = c(3, 8), code = c("A", "B")),
-#'   annotations2 = data.frame(start = c(2, 6), end = c(4, 9), code = c("A", "C"))
-#' ))
-#'
-#' # Generate visualizations
-#' plots <- generate_comparison_plots(results)
-#' print(plots$distribution)
-#' }
-#'
 #' @keywords internal
 generate_comparison_plots <- function(comparison_results) {
   if (is.null(comparison_results) || length(comparison_results$coding_strategies) < 2) {
@@ -4657,14 +4425,16 @@ generate_comparison_plots <- function(comparison_results) {
 
   # Distribution comparison plot
   distribution_plot <- function() {
+    # Save current par settings and restore on exit
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+
     # Calculate total height needed
     n_plots <- length(comparison_results$coding_strategies)
 
     # Set up the plotting area with adjusted margins
     par(mfrow = c(n_plots, 1),
-        # Adjust margins (bottom, left, top, right) to be smaller
         mar = c(3, 2, 2, 1),
-        # Add outer margins (bottom, left, top, right)
         oma = c(2, 2, 1, 1))
 
     for (i in seq_along(comparison_results$coding_strategies)) {
@@ -4673,12 +4443,11 @@ generate_comparison_plots <- function(comparison_results) {
         freqs <- strategy$coverage$distribution$frequencies
         bp <- barplot(freqs,
                       main = paste("Coder", i),
-                      las = 2,           # Rotate labels
-                      cex.names = 0.7,   # Reduce label size
-                      cex.axis = 0.7,    # Reduce axis text size
+                      las = 2,
+                      cex.names = 0.7,
+                      cex.axis = 0.7,
                       col = "steelblue",
-                      ylim = c(0, max(freqs) * 1.2)) # Add some space at top
-        # Add value labels on top of bars
+                      ylim = c(0, max(freqs) * 1.2))
         text(x = bp, y = freqs, labels = freqs, pos = 3, cex = 0.6)
       }
     }
@@ -4690,6 +4459,10 @@ generate_comparison_plots <- function(comparison_results) {
 
   # Code overlap patterns plot
   overlap_plot <- function() {
+    # Save current par settings and restore on exit
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+
     n_plots <- length(comparison_results$coding_strategies)
 
     par(mfrow = c(n_plots, 1),
@@ -4723,6 +4496,10 @@ generate_comparison_plots <- function(comparison_results) {
 
   # Sequence patterns plot
   sequence_plot <- function() {
+    # Save current par settings and restore on exit
+    oldpar <- par(no.readonly = TRUE)
+    on.exit(par(oldpar))
+
     n_plots <- length(comparison_results$coding_strategies)
 
     par(mfrow = c(n_plots, 1),
@@ -4794,26 +4571,6 @@ generate_comparison_plots <- function(comparison_results) {
 #' @importFrom grDevices recordPlot
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Create sample distribution data
-#' dist <- list(
-#'   frequencies = c(
-#'     "Code1" = 5,
-#'     "Code2" = 3,
-#'     "Code3" = 7
-#'   )
-#' )
-#'
-#' # Create basic plot
-#' plot_code_distribution(dist)
-#'
-#' # Create plot with custom title
-#' plot_code_distribution(dist, main = "Code Distribution")
-#'
-#' # Handle empty distribution
-#' plot_code_distribution(list(frequencies = integer(0)))
-#' }
 plot_code_distribution <- function(distribution, main = "", ...) {
   if (is.null(distribution) || length(distribution$frequencies) == 0) {
     plot(0, 0, type = "n",
@@ -4822,6 +4579,10 @@ plot_code_distribution <- function(distribution, main = "", ...) {
          ylab = "")
     return()
   }
+
+  # Save current par settings and restore on exit
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
 
   # Create barplot with rotated labels
   bp <- barplot(distribution$frequencies,
@@ -4854,20 +4615,6 @@ plot_code_distribution <- function(distribution, main = "", ...) {
 #' @param description Optional character string providing a description of the code
 #'
 #' @return Updated node with new code added
-#'
-#' @examples
-#' \dontrun{
-#' # Create root node
-#' root <- Node$new("Root")
-#'
-#' # Add code to root level
-#' root <- add_code_to_theme(root, "Interview", character(0),
-#'                          "Interview transcript marker")
-#'
-#' # Add code to specific theme
-#' root <- add_code_to_theme(root, "Grounded Theory", c("Methods", "Qualitative"),
-#'                          "Grounded theory methodology")
-#' }
 #'
 #' @keywords internal
 add_code_to_theme <- function(node, code_name, theme_path, description = "") {
@@ -4914,17 +4661,6 @@ add_code_to_theme <- function(node, code_name, theme_path, description = "") {
 #' @param new_parent_path Character vector specifying the path to the new parent
 #'
 #' @return Updated node hierarchy with item moved to new location
-#'
-#' @examples
-#' \dontrun{
-#' # Create hierarchy
-#' root <- Node$new("Root")
-#' theme1 <- root$AddChild("Theme1")
-#' theme2 <- root$AddChild("Theme2")
-#'
-#' # Move Theme1 to be a child of Theme2
-#' root <- move_item(root, c("Theme1"), c("Theme2"))
-#' }
 #'
 #' @keywords internal
 move_item <- function(node, item_path, new_parent_path) {
@@ -4997,25 +4733,6 @@ move_item <- function(node, item_path, new_parent_path) {
 #' @return New Node object with restored data and children
 #'
 #' @importFrom data.tree Node
-#'
-#' @examples
-#' \dontrun{
-#' # Create parent node
-#' parent <- Node$new("Parent")
-#'
-#' # Create node data
-#' node_data <- list(
-#'   name = "Child",
-#'   type = "theme",
-#'   description = "A child node",
-#'   created = Sys.time(),
-#'   children = list()
-#' )
-#'
-#' # Restore node
-#' new_node <- restore_node(parent, node_data)
-#' }
-#'
 #' @keywords internal
 restore_node <- function(parent, node_data) {
   new_node <- parent$AddChild(node_data$name)
@@ -5042,19 +4759,6 @@ restore_node <- function(parent, node_data) {
 #' @param node Node object to check ancestry against
 #'
 #' @return Logical indicating whether potential_ancestor is an ancestor of node
-#'
-#' @examples
-#' \dontrun{
-#' # Create hierarchy
-#' root <- Node$new("Root")
-#' child <- root$AddChild("Child")
-#' grandchild <- child$AddChild("Grandchild")
-#'
-#' # Check ancestry
-#' is_ancestor(root, grandchild)  # TRUE
-#' is_ancestor(grandchild, root)  # FALSE
-#' }
-#'
 #' @keywords internal
 is_ancestor <- function(potential_ancestor, node) {
   current <- node
@@ -5080,18 +4784,6 @@ is_ancestor <- function(potential_ancestor, node) {
 #'
 #' @importFrom jsonlite toJSON
 #'
-#' @examples
-#' \dontrun{
-#' # Create sample hierarchy
-#' root <- Node$new("Root")
-#' theme1 <- root$AddChild("Theme1")
-#' theme1$AddChild("Code1")
-#'
-#' # Export to JSON
-#' json_string <- export_hierarchy(root)
-#' writeLines(json_string, "hierarchy.json")
-#' }
-#'
 #' @keywords internal
 export_hierarchy <- function(node) {
   hierarchy_list <- as.list(node)
@@ -5110,16 +4802,6 @@ export_hierarchy <- function(node) {
 #'
 #' @importFrom jsonlite fromJSON
 #' @importFrom data.tree as.Node
-#'
-#' @examples
-#' \dontrun{
-#' # Read JSON file
-#' json_string <- readLines("hierarchy.json")
-#'
-#' # Import hierarchy
-#' root <- import_hierarchy(json_string)
-#' print(root)
-#' }
 #'
 #' @keywords internal
 import_hierarchy <- function(json_string) {
@@ -5142,16 +4824,6 @@ import_hierarchy <- function(json_string) {
 #'   }
 #'
 #' @return Character string containing HTML markup for tree visualization
-#'
-#' @examples
-#' \dontrun{
-#' root <- Node$new("Root")
-#' theme1 <- root$AddChild("Theme1")
-#' theme1$type <- "theme"
-#' code1 <- theme1$AddChild("Code1")
-#' code1$type <- "code"
-#' html <- visualize_hierarchy(root)
-#' }
 #' @keywords internal
 visualize_hierarchy <- function(node) {
   if (is.null(node)) return("Empty hierarchy")
@@ -5210,7 +4882,27 @@ visualize_hierarchy <- function(node) {
   )
 }
 
-# Helper function to find a node by name
+#' Find node by name in a tree structure
+#'
+#' @description
+#' Recursively searches through a tree structure to find a node with a specific name.
+#' The search is performed depth-first and returns the first matching node found.
+#'
+#' @param node Node object representing the current position in the tree. Should have:
+#'   \itemize{
+#'     \item name: Character string identifier
+#'     \item children: List of child nodes
+#'   }
+#' @param target_name Character string specifying the name to search for
+#'
+#' @return Node object if found, NULL otherwise
+#'
+#' @details
+#' The function handles NULL inputs safely and performs a recursive depth-first
+#' search through the tree structure. It checks node names and recursively
+#' searches through child nodes.
+#'
+#' @keywords internal
 find_node_by_name <- function(node, target_name) {
   if (is.null(node) || is.null(target_name)) return(NULL)
 
@@ -5247,19 +4939,6 @@ find_node_by_name <- function(node, target_name) {
 #'     \item average_codes_per_theme: Average number of codes per theme
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' # Create sample hierarchy
-#' root <- Node$new("Root")
-#' theme1 <- root$AddChild("Theme1")
-#' theme1$AddChild("Code1")
-#' theme1$AddChild("Code2")
-#'
-#' # Calculate statistics
-#' stats <- calculate_hierarchy_stats(root)
-#' print(stats$total_codes)  # Should print 2
-#' }
-#'
 #' @keywords internal
 calculate_hierarchy_stats <- function(node) {
   if (is.null(node)) {
@@ -5287,11 +4966,23 @@ calculate_hierarchy_stats <- function(node) {
       n_themes <<- n_themes + 1
       # Count codes that are direct children of this theme
       if (!is.null(node$name) && !is.null(node$children)) {
-        codes_in_theme <- sum(sapply(node$children, function(x) {
+        # Safely get children as a list
+        children <- if (inherits(node$children, "Node")) {
+          list(node$children)
+        } else if (is.list(node$children)) {
+          node$children
+        } else {
+          list()
+        }
+
+        codes_in_theme <- sum(vapply(children, function(x) {
           child_type <- if (!is.null(x$type) && is.character(x$type)) x$type else "unknown"
           child_type == "code"
-        }))
-        codes_per_theme[[node$name]] <<- codes_in_theme
+        }, logical(1)))
+
+        if (codes_in_theme > 0) {
+          codes_per_theme[[node$name]] <<- codes_in_theme
+        }
       }
     } else if (node_type == "code") {
       n_codes <<- n_codes + 1
@@ -5299,8 +4990,19 @@ calculate_hierarchy_stats <- function(node) {
 
     max_depth <<- max(max_depth, depth)
 
-    if (!is.null(node$children) && length(node$children) > 0) {
-      lapply(node$children, function(child) traverse_node(child, depth + 1))
+    # Safely traverse children
+    if (!is.null(node$children)) {
+      children <- if (inherits(node$children, "Node")) {
+        list(node$children)
+      } else if (is.list(node$children)) {
+        node$children
+      } else {
+        list()
+      }
+
+      for (child in children) {
+        traverse_node(child, depth + 1)
+      }
     }
   }
 
@@ -5335,16 +5037,6 @@ calculate_hierarchy_stats <- function(node) {
 #'
 #' @return List of annotation clusters, where each cluster contains annotations
 #'         that are within a specified distance of each other
-#'
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   start = c(1, 5, 100),
-#'   end = c(3, 8, 105),
-#'   code = c("code1", "code2", "code3")
-#' )
-#' clusters <- find_annotation_clusters(annotations)
-#' }
 #'
 #' @keywords internal
 find_annotation_clusters <- function(annotations) {
@@ -5381,6 +5073,32 @@ find_annotation_clusters <- function(annotations) {
   return(clusters)
 }
 
+#' Analyze coding density in text
+#'
+#' @description
+#' Calculates metrics related to coding density in the text, including overall
+#' density and identification of densely coded regions.
+#'
+#' @param annotations Data frame containing annotations with columns:
+#'   \itemize{
+#'     \item start: numeric, starting position
+#'     \item end: numeric, ending position
+#'     \item code: character, code identifier
+#'   }
+#'
+#' @return List containing:
+#'   \itemize{
+#'     \item overall_density: Numeric value representing proportion of text covered by codes
+#'     \item dense_regions: List of vectors, each containing start and end positions
+#'       of identified dense coding regions
+#'   }
+#'
+#' @details
+#' Density is calculated as the ratio of coded text to total text length.
+#' Dense regions are identified where consecutive annotations are close together
+#' (within 20 characters by default).
+#'
+#' @keywords internal
 analyze_coding_density <- function(annotations) {
   if (nrow(annotations) == 0) return(list())
 
@@ -5406,6 +5124,25 @@ analyze_coding_density <- function(annotations) {
   ))
 }
 
+#' Analyze coding density across text
+#'
+#' @description
+#' Analyzes the density of code applications across the text by calculating
+#' overall density metrics and identifying regions of dense coding activity.
+#'
+#' @param annotations Data frame containing annotations with columns:
+#'   \itemize{
+#'     \item start: numeric, starting position of annotation
+#'     \item end: numeric, ending position of annotation
+#'   }
+#'
+#' @return List containing:
+#'   \itemize{
+#'     \item overall_density: Numeric value representing the proportion of text covered by codes
+#'     \item dense_regions: List of vector pairs indicating start and end positions of dense regions
+#'   }
+#'
+#' @keywords internal
 analyze_code_distribution <- function(annotations) {
   if (nrow(annotations) == 0) return(list())
 
@@ -5440,16 +5177,6 @@ analyze_code_distribution <- function(annotations) {
 #'     \item after: Following annotation if exists
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' all_annotations <- data.frame(
-#'   start = c(1, 10, 20, 30),
-#'   end = c(5, 15, 25, 35),
-#'   code = c("code1", "code2", "code1", "code3")
-#' )
-#' code1_anns <- all_annotations[all_annotations$code == "code1", ]
-#' contexts <- analyze_code_context(code1_anns, all_annotations)
-#' }
 #' @keywords internal
 analyze_code_context <- function(code_anns, all_anns) {
   if (nrow(code_anns) == 0) return(list())
@@ -5497,14 +5224,6 @@ analyze_code_context <- function(code_anns, all_anns) {
 #'     \item has_memos: Logical vector indicating memo presence
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   code = c("code1", "code1", "code2"),
-#'   memo = c("note 1", "", "note 2")
-#' )
-#' patterns <- analyze_memo_patterns(annotations)
-#' }
 #' @keywords internal
 analyze_memo_patterns <- function(code_anns) {
   if (nrow(code_anns) == 0) return(list())
@@ -5541,15 +5260,6 @@ analyze_memo_patterns <- function(code_anns) {
 #'   }
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   start = c(1, 5, 10),
-#'   end = c(8, 15, 20),
-#'   code = c("code1", "code2", "code1")
-#' )
-#' overlaps <- find_overlapping_codes(annotations)
-#' }
 find_overlapping_codes <- function(annotations) {
   if (!is.data.frame(annotations) || nrow(annotations) <= 1) {
     return(list())
@@ -5590,6 +5300,31 @@ find_overlapping_codes <- function(annotations) {
   return(overlaps)
 }
 
+#' Analyze combinations of code pairs
+#'
+#' @description
+#' Analyzes the frequency of different code combinations by counting how often
+#' different pairs of codes appear together in overlapping annotations.
+#'
+#' @param overlaps List of overlap information, where each element contains:
+#'   \itemize{
+#'     \item code1: character, identifier of first code
+#'     \item code2: character, identifier of second code
+#'   }
+#'
+#' @return List containing:
+#'   \itemize{
+#'     \item frequencies: Table object containing counts of each code pair combination,
+#'       where row names are formatted as "code1-code2" with codes sorted alphabetically
+#'   }
+#'
+#' @details
+#' The function processes overlapping code pairs and creates a frequency table of their
+#' combinations. Code pairs are sorted alphabetically before counting to ensure consistent
+#' ordering (e.g., "A-B" and "B-A" are counted as the same combination). Returns an empty
+#' list if no overlaps are provided.
+#'
+#' @keywords internal
 analyze_code_combinations <- function(overlaps) {
   if (length(overlaps) == 0) return(list())
 
@@ -5603,6 +5338,30 @@ analyze_code_combinations <- function(overlaps) {
   ))
 }
 
+#' Analyze characteristics of code overlaps
+#'
+#' @description
+#' Analyzes the characteristics of overlapping code applications by calculating
+#' various metrics about overlap patterns.
+#'
+#' @param overlaps List of overlap information, where each element contains:
+#'   \itemize{
+#'     \item overlap_start: numeric, starting position of overlap
+#'     \item overlap_end: numeric, ending position of overlap
+#'   }
+#'
+#' @return List containing:
+#'   \itemize{
+#'     \item avg_length: Numeric value of average overlap length
+#'     \item total_overlaps: Integer count of total overlapping instances
+#'   }
+#'
+#' @details
+#' Calculates metrics about code overlaps including the average length of
+#' overlapping regions and the total number of overlaps. Returns empty list
+#' for empty input.
+#'
+#' @keywords internal
 analyze_overlap_characteristics <- function(overlaps) {
   if (length(overlaps) == 0) return(list())
 
@@ -5636,15 +5395,6 @@ analyze_overlap_characteristics <- function(overlaps) {
 #'     \item to: Target code
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   start = c(1, 10, 20),
-#'   end = c(5, 15, 25),
-#'   code = c("code1", "code2", "code3")
-#' )
-#' transitions <- find_code_transitions(annotations)
-#' }
 #' @keywords internal
 find_code_transitions <- function(annotations) {
   if (nrow(annotations) <= 1) return(list())
@@ -5677,14 +5427,6 @@ find_code_transitions <- function(annotations) {
 #'     \item values: Number of occurrences
 #'   }
 #'
-#' @examples
-#' \dontrun{
-#' annotations <- data.frame(
-#'   code = c("A", "B", "A", "B", "C")
-#' )
-#' patterns <- find_repeated_sequences(annotations)
-#' # Returns list showing A-B pattern occurs twice
-#' }
 #' @keywords internal
 find_repeated_sequences <- function(annotations) {
   if (nrow(annotations) <= 1) return(list())
@@ -5731,25 +5473,6 @@ find_repeated_sequences <- function(annotations) {
 #'     \item total_codes_range: Numeric vector with min and max total codes
 #'     \item unique_codes_range: Numeric vector with min and max unique codes
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' strategy1 <- list(
-#'   coverage = list(
-#'     distribution = list(
-#'       frequencies = table(c("code1", "code1", "code2"))
-#'     )
-#'   )
-#' )
-#' strategy2 <- list(
-#'   coverage = list(
-#'     distribution = list(
-#'       frequencies = table(c("code2", "code3", "code3"))
-#'     )
-#'   )
-#' )
-#' results <- compare_coverage(list(strategy1, strategy2))
-#' }
 #'
 #' @keywords internal
 compare_coverage <- function(coding_strategies) {
@@ -5798,18 +5521,6 @@ compare_coverage <- function(coding_strategies) {
 #'   }
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' patterns1 <- list(
-#'   code1 = list(typical_length = 10,
-#'                memo_patterns = list(memo_frequency = 0.5))
-#' )
-#' patterns2 <- list(
-#'   code1 = list(typical_length = 15,
-#'                memo_patterns = list(memo_frequency = 0.3))
-#' )
-#' results <- compare_code_patterns(list(patterns1, patterns2))
-#' }
 compare_code_patterns <- function(patterns_list) {
   if (length(patterns_list) < 2) return("Need at least two sets for comparison")
 
@@ -5848,12 +5559,6 @@ compare_code_patterns <- function(patterns_list) {
 #'   }
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' overlaps1 <- list(combinations = list(frequencies = c("A-B" = 2)))
-#' overlaps2 <- list(combinations = list(frequencies = c("A-B" = 1, "B-C" = 3)))
-#' results <- compare_co_occurrences(list(overlaps1, overlaps2))
-#' }
 compare_co_occurrences <- function(overlaps_list) {
   if (length(overlaps_list) < 2) return("Need at least two sets for comparison")
 
@@ -5888,12 +5593,6 @@ compare_co_occurrences <- function(overlaps_list) {
 #'   }
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' seq1 <- list(transitions = list(c("A", "B"), c("B", "C")))
-#' seq2 <- list(transitions = list(c("A", "B")))
-#' results <- compare_sequences(list(seq1, seq2))
-#' }
 compare_sequences <- function(sequences_list) {
   if (length(sequences_list) < 2) return("Need at least two sets for comparison")
 
@@ -5924,15 +5623,6 @@ compare_sequences <- function(sequences_list) {
 #' @return Character string containing formatted coverage analysis results
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # With character input
-#' format_coverage_differences("Direct analysis result")
-#'
-#' # With list input
-#' differences <- list(density_summary = "Coverage density varies from 0.2 to 0.8")
-#' format_coverage_differences(differences)
-#' }
 format_coverage_differences <- function(differences) {
   if (is.character(differences)) return(differences)
   if (is.list(differences) && !is.null(differences$density_summary)) {
@@ -5956,15 +5646,6 @@ format_coverage_differences <- function(differences) {
 #' @return Character string containing formatted code analysis results
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # With character input
-#' format_code_differences("Direct analysis result")
-#'
-#' # With list input
-#' differences <- list(pattern_summary = "Analyzed 5 coding patterns")
-#' format_code_differences(differences)
-#' }
 format_code_differences <- function(differences) {
   if (is.character(differences)) return(differences)
   if (is.list(differences) && !is.null(differences$pattern_summary)) {
@@ -5985,14 +5666,6 @@ format_code_differences <- function(differences) {
 #' @return Character string containing formatted overlap analysis results
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # With character input
-#' format_overlap_differences("Direct analysis result")
-#'
-#' # With complex input
-#' format_overlap_differences(list(some_results = "data"))
-#' }
 format_overlap_differences <- function(differences) {
   if (is.character(differences)) return(differences)
   return("Overlap analysis completed")
@@ -6010,14 +5683,6 @@ format_overlap_differences <- function(differences) {
 #' @return Character string containing formatted sequence analysis results
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # With character input
-#' format_sequence_differences("Direct analysis result")
-#'
-#' # With complex input
-#' format_sequence_differences(list(some_results = "data"))
-#' }
 format_sequence_differences <- function(differences) {
   if (is.character(differences)) return(differences)
   return("Sequence analysis completed")
@@ -6041,15 +5706,6 @@ format_sequence_differences <- function(differences) {
 #' @importFrom graphics barplot text par
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' overlaps <- list(
-#'   combinations = list(
-#'     frequencies = c("A-B" = 2, "B-C" = 3)
-#'   )
-#' )
-#' plot_overlap_patterns(overlaps, main = "Code Overlaps")
-#' }
 plot_overlap_patterns <- function(overlaps, main = "", ...) {
   if (is.null(overlaps) || length(overlaps$combinations$frequencies) == 0) {
     plot(0, 0, type = "n",
@@ -6058,6 +5714,10 @@ plot_overlap_patterns <- function(overlaps, main = "", ...) {
          ylab = "")
     return()
   }
+
+  # Save current par settings and restore on exit
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
 
   # Create barplot with rotated labels
   bp <- barplot(overlaps$combinations$frequencies,
@@ -6096,16 +5756,6 @@ plot_overlap_patterns <- function(overlaps, main = "", ...) {
 #' @importFrom graphics barplot text par
 #'
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' sequences <- list(
-#'   transitions = list(
-#'     c(from = "A", to = "B"),
-#'     c(from = "B", to = "C")
-#'   )
-#' )
-#' plot_sequence_patterns(sequences, main = "Code Sequences")
-#' }
 plot_sequence_patterns <- function(sequences, main = "", ...) {
   if (is.null(sequences) || length(sequences$transitions) == 0) {
     plot(0, 0, type = "n",
@@ -6114,6 +5764,10 @@ plot_sequence_patterns <- function(sequences, main = "", ...) {
          ylab = "")
     return()
   }
+
+  # Save current par settings and restore on exit
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
 
   # Convert transitions to table
   trans_table <- table(sapply(sequences$transitions,
@@ -6136,6 +5790,34 @@ plot_sequence_patterns <- function(sequences, main = "", ...) {
        srt = 45,
        adj = 1,
        cex = 0.7)
+}
+
+#' Handle directory creation confirmation
+#'
+#' @description
+#' Creates the data directory after receiving user confirmation
+#'
+#' @param input Shiny input object
+#' @param rv ReactiveValues object containing application state
+#' @param session Shiny session object
+#' @keywords internal
+handle_dir_confirmation <- function(input, rv, session) {
+  observeEvent(input$confirm_create_dir, {
+    data_dir <- tools::R_user_dir("textAnnotatoR", "data")
+
+    tryCatch({
+      dir.create(data_dir, recursive = TRUE)
+      rv$data_dir <- data_dir
+      removeModal()
+      showNotification("Directory created successfully", type = "message")
+    }, error = function(e) {
+      showNotification(
+        sprintf("Failed to create directory: %s", e$message),
+        type = "error"
+      )
+      rv$data_dir <- NULL
+    })
+  })
 }
 
 #' JavaScript code for handling text selection and UI interactions

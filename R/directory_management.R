@@ -1,74 +1,58 @@
-#' Initialize data directory
+#' Initialize data directory with user confirmation
 #'
 #' @description
-#' Creates and initializes the package data directory in the user's home directory.
-#' Uses R_user_dir to ensure compliance with CRAN policies regarding file system
-#' access. All operations are performed only when explicitly requested by the user.
+#' Creates and initializes the package data directory after obtaining explicit
+#' user confirmation. Uses R_user_dir to create directory in user's home space
+#' only after approval.
 #'
-#' @return Character string containing the path to the data directory
+#' @param session Shiny session object for displaying confirmation dialog
+#' @return Character string containing the path to the data directory, or NULL if declined
 #' @importFrom tools R_user_dir
-#' @importFrom shiny showNotification
+#' @importFrom shiny showModal modalDialog
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Initialize the data directory
-#' data_dir <- init_data_dir()
-#'
-#' # Check if directory exists
-#' dir.exists(data_dir)
-#'
-#' # Check directory contents
-#' list.files(data_dir)
-#' }
-init_data_dir <- function() {
-  handle_error(
-    expr = {
-      data_dir <- tools::R_user_dir("textAnnotatoR", "data")
-      if (!dir.exists(data_dir)) {
-        dir.create(data_dir, recursive = TRUE)
-      }
-      return(data_dir)
-    },
-    error_msg = "Failed to initialize data directory",
-    success_msg = NULL  # Silent on success as this is an internal operation
-  )
+init_data_dir <- function(session) {
+  data_dir <- tools::R_user_dir("textAnnotatoR", "data")
+
+  if (!dir.exists(data_dir)) {
+    # Show confirmation dialog
+    showModal(modalDialog(
+      title = "Permission Required",
+      sprintf("textAnnotatoR needs to create a directory at:\n%s\nto store your annotation projects. Do you approve?", data_dir),
+      footer = tagList(
+        modalButton("Decline"),
+        actionButton("confirm_create_dir", "Approve")
+      ),
+      easyClose = FALSE
+    ))
+
+    return(NULL) # Return NULL initially, actual creation happens after confirmation
+  }
+
+  return(data_dir)
 }
 
-#' Get project directory
+#' Get project directory path
 #'
 #' @description
-#' Returns the path to the projects directory, creating it if necessary.
-#' This directory is used for storing saved annotation projects. The function
-#' ensures the directory exists and is accessible before returning its path.
+#' Retrieves or creates the project directory path where all project files will be stored.
+#' Creates the directory if it doesn't exist.
 #'
-#' @return Character string containing the path to the projects directory
+#' @return Character string containing the project directory path, or NULL if creation fails
 #' @importFrom shiny showNotification
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Get the projects directory path
-#' project_dir <- get_project_dir()
-#'
-#' # Save a project file
-#' saveRDS(list(data = "example"),
-#'         file = file.path(project_dir, "example_project.rds"))
-#'
-#' # List project files
-#' list.files(project_dir, pattern = "\\.rds$")
-#' }
 get_project_dir <- function() {
-  handle_error(
+  project_dir <- handle_error(
     expr = {
       data_dir <- init_data_dir()
       project_dir <- file.path(data_dir, "projects")
       if (!dir.exists(project_dir)) {
         dir.create(project_dir, recursive = TRUE)
       }
-      return(project_dir)
+      project_dir
     },
-    error_msg = "Failed to create or access project directory",
-    success_msg = NULL  # Silent on success
+    error_msg = "Failed to create or access project directory"
   )
+  return(project_dir)
 }
 
 #' Get export directory
@@ -82,18 +66,6 @@ get_project_dir <- function() {
 #' @return Character string containing the path to the exports directory
 #' @importFrom shiny showNotification
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Get the exports directory path
-#' export_dir <- get_export_dir()
-#'
-#' # Export some data
-#' write.csv(data.frame(x = 1:3, y = letters[1:3]),
-#'           file = file.path(export_dir, "example_export.csv"))
-#'
-#' # Check exported files
-#' list.files(export_dir, pattern = "\\.csv$")
-#' }
 get_export_dir <- function() {
   handle_error(
     expr = {
@@ -121,20 +93,6 @@ get_export_dir <- function() {
 #' @return Sanitized path string that is safe to use for file operations
 #' @importFrom shiny showNotification
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Clean a simple filename
-#' clean_project_path("my_project.rds")
-#'
-#' # Clean a path with special characters
-#' clean_project_path("my@project#2023.rds")
-#'
-#' # Clean a path with directory traversal attempt
-#' clean_project_path("../dangerous/path/project.rds")
-#'
-#' # Clean a path with spaces and special characters
-#' clean_project_path("My Project 2023!.rds")
-#' }
 clean_project_path <- function(path) {
   handle_error(
     expr = {
@@ -167,16 +125,6 @@ clean_project_path <- function(path) {
 #' @return Logical indicating whether the directory is valid and accessible
 #' @importFrom shiny showNotification
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Validate project directory
-#' project_dir <- get_project_dir()
-#' is_valid <- validate_directory(project_dir)
-#'
-#' # Validate export directory
-#' export_dir <- get_export_dir()
-#' is_valid <- validate_directory(export_dir)
-#' }
 validate_directory <- function(dir_path) {
   handle_error(
     expr = {
@@ -217,17 +165,6 @@ validate_directory <- function(dir_path) {
 #' @return Character string containing the path to the backup directory
 #' @importFrom shiny showNotification
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Create backup directory with default settings
-#' backup_dir <- create_backup_dir()
-#'
-#' # Create backup directory with custom maximum
-#' backup_dir <- create_backup_dir(max_backups = 5)
-#'
-#' # Check backup directory contents
-#' list.files(backup_dir)
-#' }
 create_backup_dir <- function(max_backups = 3) {
   handle_error(
     expr = {
@@ -266,14 +203,6 @@ create_backup_dir <- function(max_backups = 3) {
 #' @return Cleaned and validated directory path
 #' @importFrom shiny showNotification
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Clean export path
-#' export_path <- clean_export_path("my/export/path")
-#'
-#' # Clean and create directory if needed
-#' export_path <- clean_export_path("my/export/path", create = TRUE)
-#' }
 clean_export_path <- function(dir_path, create = FALSE) {
   handle_error(
     expr = {

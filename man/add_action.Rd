@@ -14,20 +14,4 @@ add_action(rv, action)
 \description{
 Add action to history
 }
-\examples{
-\dontrun{
-# Initialize reactive values
-rv <- reactiveValues(
-  action_history = list(),
-  action_index = 0
-)
-
-# Create and add an action
-action <- create_action(
-  type = "add_annotation",
-  data = list(start = 1, end = 10, code = "example")
-)
-add_action(rv, action)
-}
-}
 \keyword{internal}
