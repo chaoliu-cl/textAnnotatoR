@@ -17,15 +17,4 @@ Checks if a directory exists and is accessible for reading and writing.
 This function performs comprehensive checks to ensure the directory
 can be used for file operations.
 }
-\examples{
-\dontrun{
-# Validate project directory
-project_dir <- get_project_dir()
-is_valid <- validate_directory(project_dir)
-
-# Validate export directory
-export_dir <- get_export_dir()
-is_valid <- validate_directory(export_dir)
-}
-}
 \keyword{internal}

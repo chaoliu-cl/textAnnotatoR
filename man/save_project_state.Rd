@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotate_gui.R, R/project.R
 \name{save_project_state}
 \alias{save_project_state}
-\title{Save project state to file}
+\title{Save and manage project state}
 \usage{
 save_project_state(state, filename)
 
@@ -23,53 +23,16 @@ save_project_state(state, filename)
 \item{filename}{Character string specifying the filename for saving}
 }
 \value{
-Invisible NULL. Called for side effect of saving project state.
+Invisible NULL, called for side effect of saving project state
 
 Invisible NULL. Called for side effect of saving project state.
 }
 \description{
-Saves the current project state including text, annotations, codes, code tree,
-and other metadata to an RDS file. Creates the projects directory if it doesn't exist.
+Saves the current state of a text annotation project, including annotations,
+codes, and memos. Creates necessary directories and handles file operations
+safely.
 
 Saves the current project state including text, annotations, codes, code tree,
 and other metadata to an RDS file. Creates the projects directory if it doesn't exist.
-}
-\examples{
-\dontrun{
-state <- list(
-  text = "Sample text",
-  annotations = data.frame(
-    start = 1,
-    end = 5,
-    code = "code1",
-    stringsAsFactors = FALSE
-  ),
-  codes = "code1",
-  code_tree = Node$new("Root"),
-  code_colors = c(code1 = "#FF0000"),
-  memos = list(),
-  code_descriptions = list()
-)
-save_project_state(state, "my_project")
-}
-
-\dontrun{
-state <- list(
-  text = "Sample text",
-  annotations = data.frame(
-    start = 1,
-    end = 5,
-    code = "code1",
-    stringsAsFactors = FALSE
-  ),
-  codes = "code1",
-  code_tree = Node$new("Root"),
-  code_colors = c(code1 = "#FF0000"),
-  memos = list(),
-  code_descriptions = list()
-)
-save_project_state(state, "my_project")
-}
-
 }
 \keyword{internal}

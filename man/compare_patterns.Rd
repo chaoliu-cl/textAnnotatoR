@@ -6,7 +6,32 @@
 \usage{
 compare_patterns(coding_strategies)
 }
+\arguments{
+\item{coding_strategies}{List of coding strategies, where each strategy contains:
+\itemize{
+\item coverage: List containing density and distribution information
+\item code_patterns: List of code application patterns
+\item combinations: List of code combination patterns
+\item sequences: List of code sequence patterns
+}}
+}
+\value{
+List containing comparison results:
+\itemize{
+\item coverage_differences: Analysis of coding density variations
+\item code_differences: Analysis of code application differences
+\item combination_differences: Analysis of code combination patterns
+\item sequence_differences: Analysis of code sequence patterns
+}
+}
 \description{
-Compare coding patterns between different coders
+Analyzes and compares coding patterns between different coders by examining
+various aspects including coverage, code application patterns, combinations,
+and sequences.
+}
+\details{
+The function performs multiple comparisons with error handling for each aspect
+of coding patterns. Returns descriptive messages when analysis cannot be
+performed due to insufficient data.
 }
 \keyword{internal}

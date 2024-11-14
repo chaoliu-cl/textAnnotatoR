@@ -27,18 +27,4 @@ Shows modal dialog for loading project with file selection functionality.
 
 Shows modal dialog for loading project with file selection functionality.
 }
-\examples{
-\dontrun{
-# In Shiny server function:
-observeEvent(input$load_button, {
-  load_project_interactive(rv, input, session, roots)
-})
-}
-\dontrun{
-# In Shiny server function:
-observeEvent(input$load_button, {
-  load_project_interactive(rv, input, session, roots)
-})
-}
-}
 \keyword{internal}

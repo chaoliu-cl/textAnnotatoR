@@ -2,28 +2,19 @@
 % Please edit documentation in R/directory_management.R
 \name{init_data_dir}
 \alias{init_data_dir}
-\title{Initialize data directory}
+\title{Initialize data directory with user confirmation}
 \usage{
-init_data_dir()
+init_data_dir(session)
+}
+\arguments{
+\item{session}{Shiny session object for displaying confirmation dialog}
 }
 \value{
-Character string containing the path to the data directory
+Character string containing the path to the data directory, or NULL if declined
 }
 \description{
-Creates and initializes the package data directory in the user's home directory.
-Uses R_user_dir to ensure compliance with CRAN policies regarding file system
-access. All operations are performed only when explicitly requested by the user.
-}
-\examples{
-\dontrun{
-# Initialize the data directory
-data_dir <- init_data_dir()
-
-# Check if directory exists
-dir.exists(data_dir)
-
-# Check directory contents
-list.files(data_dir)
-}
+Creates and initializes the package data directory after obtaining explicit
+user confirmation. Uses R_user_dir to create directory in user's home space
+only after approval.
 }
 \keyword{internal}

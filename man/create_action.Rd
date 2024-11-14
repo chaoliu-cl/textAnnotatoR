@@ -39,48 +39,4 @@ the type of action, the data involved, and how to reverse the action.
 Creates an action object for the undo/redo system, containing information about
 the type of action, the data involved, and how to reverse the action.
 }
-\examples{
-\dontrun{
-# Create an add annotation action
-action <- create_action(
-  type = "add_annotation",
-  data = list(
-    start = 1,
-    end = 10,
-    code = "important"
-  )
-)
-
-# Create a merge codes action
-merge_action <- create_action(
-  type = "merge_codes",
-  data = list(
-    old_codes = c("code1", "code2"),
-    new_code = "merged_code"
-  )
-)
-}
-
-\dontrun{
-# Create an add annotation action
-action <- create_action(
-  type = "add_annotation",
-  data = list(
-    start = 1,
-    end = 10,
-    code = "important"
-  )
-)
-
-# Create a merge codes action
-merge_action <- create_action(
-  type = "merge_codes",
-  data = list(
-    old_codes = c("code1", "code2"),
-    new_code = "merged_code"
-  )
-)
-}
-
-}
 \keyword{internal}

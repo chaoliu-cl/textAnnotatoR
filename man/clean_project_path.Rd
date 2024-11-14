@@ -18,19 +18,4 @@ characters and preventing directory traversal attempts. This function
 sanitizes file paths to prevent security issues and ensure consistent
 file naming across different operating systems.
 }
-\examples{
-\dontrun{
-# Clean a simple filename
-clean_project_path("my_project.rds")
-
-# Clean a path with special characters
-clean_project_path("my@project#2023.rds")
-
-# Clean a path with directory traversal attempt
-clean_project_path("../dangerous/path/project.rds")
-
-# Clean a path with spaces and special characters
-clean_project_path("My Project 2023!.rds")
-}
-}
 \keyword{internal}

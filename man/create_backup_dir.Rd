@@ -17,16 +17,4 @@ Creates and manages a backup directory for project files. This function
 ensures that automatic backups have a designated storage location that
 is properly managed and cleaned up when needed.
 }
-\examples{
-\dontrun{
-# Create backup directory with default settings
-backup_dir <- create_backup_dir()
-
-# Create backup directory with custom maximum
-backup_dir <- create_backup_dir(max_backups = 5)
-
-# Check backup directory contents
-list.files(backup_dir)
-}
-}
 \keyword{internal}

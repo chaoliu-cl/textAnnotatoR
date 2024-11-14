@@ -19,21 +19,4 @@ Invisible NULL
 \description{
 Loads a previously saved project state and updates all reactive values.
 }
-\examples{
-\dontrun{
-# In a Shiny server function:
-server <- function(input, output, session) {
-  rv <- reactiveValues(
-    text = "",
-    annotations = data.frame(),
-    codes = character(),
-    code_tree = Node$new("Root")
-  )
-
-  observeEvent(input$load_button, {
-    load_selected_project(rv, input, session)
-  })
-}
-}
-}
 \keyword{internal}

@@ -15,17 +15,4 @@ This directory is used for storing exported annotation data, visualizations,
 and analysis results. The function ensures the directory exists and is
 accessible before returning its path.
 }
-\examples{
-\dontrun{
-# Get the exports directory path
-export_dir <- get_export_dir()
-
-# Export some data
-write.csv(data.frame(x = 1:3, y = letters[1:3]),
-          file = file.path(export_dir, "example_export.csv"))
-
-# Check exported files
-list.files(export_dir, pattern = "\\\\.csv$")
-}
-}
 \keyword{internal}

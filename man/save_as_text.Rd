@@ -27,26 +27,4 @@ Creates a plain text file containing the annotated text with code markers.
 
 Creates a plain text file containing the annotated text with code markers.
 }
-\examples{
-\dontrun{
-rv <- list(
-  text = "Sample text",
-  annotations = data.frame(
-    start = 1, end = 6,
-    code = "code1"
-  )
-)
-save_as_text("output.txt", rv)
-}
-\dontrun{
-rv <- list(
-  text = "Sample text",
-  annotations = data.frame(
-    start = 1, end = 6,
-    code = "code1"
-  )
-)
-save_as_text("output.txt", rv)
-}
-}
 \keyword{internal}

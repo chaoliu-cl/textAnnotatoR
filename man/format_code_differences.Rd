@@ -20,14 +20,4 @@ Character string containing formatted code analysis results
 Formats the results of code difference analysis into a human-readable
 string, handling both character and list inputs appropriately.
 }
-\examples{
-\dontrun{
-# With character input
-format_code_differences("Direct analysis result")
-
-# With list input
-differences <- list(pattern_summary = "Analyzed 5 coding patterns")
-format_code_differences(differences)
-}
-}
 \keyword{internal}

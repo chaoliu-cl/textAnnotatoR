@@ -34,8 +34,8 @@ users through file dialogs, and no files are written automatically to the user's
 system without their direct action and consent.
 }
 \examples{
-\dontrun{
-annotate_gui()
+if(interactive()) {
+  annotate_gui()
 }
 
 }

@@ -12,38 +12,33 @@
 #' @return Result of the expression or NULL if error occurs
 #'
 #' @importFrom shiny showNotification
-#'
-#' @examples
-#' \dontrun{
-#' # Basic usage
-#' result <- handle_error(
-#'   expr = { 1 + 1 },
-#'   success_msg = "Calculation completed"
-#' )
-#'
-#' # With error handling
-#' result <- handle_error(
-#'   expr = { 1 / 0 },
-#'   error_msg = "Division by zero detected",
-#'   finally_msg = "Operation finished"
-#' )
-#' }
-#'
 #' @keywords internal
 handle_error <- function(expr, success_msg = NULL, error_msg = NULL, finally_msg = NULL) {
+  is_shiny <- requireNamespace("shiny", quietly = TRUE) &&
+    exists("session") &&
+    !is.null(get0("session"))
+
+  notify <- function(msg, type = "message") {
+    if (is_shiny) {
+      shiny::showNotification(msg, type = type)
+    } else {
+      message(msg)
+    }
+  }
+
   tryCatch({
     result <- expr
     if (!is.null(success_msg)) {
-      showNotification(success_msg, type = "message")
+      notify(success_msg, "message")
     }
     return(result)
   }, error = function(e) {
     msg <- if (is.null(error_msg)) paste("Error:", e$message) else error_msg
-    showNotification(msg, type = "error")
+    notify(msg, "error")
     return(NULL)
   }, finally = {
     if (!is.null(finally_msg)) {
-      showNotification(finally_msg, type = "message")
+      notify(finally_msg, "message")
     }
   })
 }
@@ -65,29 +60,6 @@ handle_error <- function(expr, success_msg = NULL, error_msg = NULL, finally_msg
 #'     \item reverse_data: Data for reversing the action
 #'     \item timestamp: Time the action was created
 #'   }
-#'
-#' @examples
-#' \dontrun{
-#' # Create an add annotation action
-#' action <- create_action(
-#'   type = "add_annotation",
-#'   data = list(
-#'     start = 1,
-#'     end = 10,
-#'     code = "important"
-#'   )
-#' )
-#'
-#' # Create a merge codes action
-#' merge_action <- create_action(
-#'   type = "merge_codes",
-#'   data = list(
-#'     old_codes = c("code1", "code2"),
-#'     new_code = "merged_code"
-#'   )
-#' )
-#' }
-#'
 #' @keywords internal
 create_action <- function(type, data, reverse_data = NULL) {
   list(
@@ -109,20 +81,6 @@ create_action <- function(type, data, reverse_data = NULL) {
 #' @param reverse Logical indicating whether to reverse the action
 #'
 #' @return Invisible rv (ReactiveValues object)
-#'
-#' @examples
-#' \dontrun{
-#' # Create and apply an action
-#' action <- create_action(
-#'   type = "add_annotation",
-#'   data = list(start = 1, end = 10, code = "code1")
-#' )
-#' apply_action(rv, action)
-#'
-#' # Reverse the action
-#' apply_action(rv, action, reverse = TRUE)
-#' }
-#'
 #' @keywords internal
 apply_action <- function(rv, action, reverse = FALSE) {
   data <- if (reverse) action$reverse_data else action$data
@@ -202,17 +160,6 @@ apply_action <- function(rv, action, reverse = FALSE) {
 #' @param new_memo Character string containing memo text to append
 #'
 #' @return Character string of combined memo text
-#'
-#' @examples
-#' \dontrun{
-#' # Combine non-empty memos
-#' concatenate_memos("First note", "Second note")
-#' # Returns: "First note; Second note"
-#'
-#' # Handle empty existing memo
-#' concatenate_memos("", "New note")
-#' # Returns: "New note"
-#' }
 #' @keywords internal
 concatenate_memos <- function(existing_memo, new_memo) {
   if (existing_memo == "") {
@@ -232,13 +179,4 @@ concatenate_memos <- function(existing_memo, new_memo) {
 #' @param b Second value (default) to use if first is NULL
 #' @return Returns \code{a} if not NULL, otherwise returns \code{b}
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' x <- NULL
-#' y <- 5
-#' x %||% y  # Returns 5
-#'
-#' x <- 10
-#' x %||% y  # Returns 10
-#' }
 `%||%` <- function(a, b) if (!is.null(a)) a else b

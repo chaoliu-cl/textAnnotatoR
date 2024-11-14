@@ -25,24 +25,4 @@ handling empty memos appropriately.
 Combines existing and new memo texts with proper separators,
 handling empty memos appropriately.
 }
-\examples{
-\dontrun{
-# Combine non-empty memos
-concatenate_memos("First note", "Second note")
-# Returns: "First note; Second note"
-
-# Handle empty existing memo
-concatenate_memos("", "New note")
-# Returns: "New note"
-}
-\dontrun{
-# Combine non-empty memos
-concatenate_memos("First note", "Second note")
-# Returns: "First note; Second note"
-
-# Handle empty existing memo
-concatenate_memos("", "New note")
-# Returns: "New note"
-}
-}
 \keyword{internal}

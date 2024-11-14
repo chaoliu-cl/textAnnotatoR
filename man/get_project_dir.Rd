@@ -14,7 +14,7 @@ get_project_dir()
 \value{
 Character string containing the project directory path, or NULL if creation fails
 
-Character string containing the path to the projects directory
+Character string containing the project directory path, or NULL if creation fails
 
 Character string containing the project directory path, or NULL if creation fails
 }
@@ -22,44 +22,10 @@ Character string containing the project directory path, or NULL if creation fail
 Retrieves or creates the project directory path where all project files will be stored.
 Creates the directory if it doesn't exist.
 
-Returns the path to the projects directory, creating it if necessary.
-This directory is used for storing saved annotation projects. The function
-ensures the directory exists and is accessible before returning its path.
+Retrieves or creates the project directory path where all project files will be stored.
+Creates the directory if it doesn't exist.
 
 Retrieves or creates the project directory path where all project files will be stored.
 Creates the directory if it doesn't exist.
-}
-\examples{
-\dontrun{
-# Get project directory
-project_dir <- get_project_dir()
-
-# Check if directory exists
-if (!is.null(project_dir)) {
-  list.files(project_dir)
-}
-}
-
-\dontrun{
-# Get the projects directory path
-project_dir <- get_project_dir()
-
-# Save a project file
-saveRDS(list(data = "example"),
-        file = file.path(project_dir, "example_project.rds"))
-
-# List project files
-list.files(project_dir, pattern = "\\\\.rds$")
-}
-\dontrun{
-# Get project directory
-project_dir <- get_project_dir()
-
-# Check if directory exists
-if (!is.null(project_dir)) {
-  list.files(project_dir)
-}
-}
-
 }
 \keyword{internal}

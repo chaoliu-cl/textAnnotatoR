@@ -27,30 +27,4 @@ actions including adding/removing annotations and merging/unmerging codes.
 Applies or reverses an action in the undo/redo system. Handles different types of
 actions including adding/removing annotations and merging/unmerging codes.
 }
-\examples{
-\dontrun{
-# Create and apply an action
-action <- create_action(
-  type = "add_annotation",
-  data = list(start = 1, end = 10, code = "code1")
-)
-apply_action(rv, action)
-
-# Reverse the action
-apply_action(rv, action, reverse = TRUE)
-}
-
-\dontrun{
-# Create and apply an action
-action <- create_action(
-  type = "add_annotation",
-  data = list(start = 1, end = 10, code = "code1")
-)
-apply_action(rv, action)
-
-# Reverse the action
-apply_action(rv, action, reverse = TRUE)
-}
-
-}
 \keyword{internal}

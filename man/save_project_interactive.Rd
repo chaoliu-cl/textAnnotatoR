@@ -29,18 +29,4 @@ project name input.
 Shows modal dialog for saving project with directory selection and
 project name input.
 }
-\examples{
-\dontrun{
-# In Shiny server function:
-observeEvent(input$save_button, {
-  save_project_interactive(rv, input, session, volumes)
-})
-}
-\dontrun{
-# In Shiny server function:
-observeEvent(input$save_button, {
-  save_project_interactive(rv, input, session, volumes)
-})
-}
-}
 \keyword{internal}

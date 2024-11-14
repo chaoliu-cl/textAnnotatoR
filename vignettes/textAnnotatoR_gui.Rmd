@@ -270,15 +270,6 @@ save_annotations(annotations, "output.csv")
 - Try a different browser
 - Check for browser compatibility
 
-## Getting Help
-
-If you encounter issues:
-
-1. Check the error messages
-2. Review the documentation
-3. Look for similar issues in the project repository
-4. Contact support with specific details about your problem
-
 # Conclusion
 
 The Text Annotation Interface provides a robust environment for qualitative data analysis. By following this guide and exploring the various features, you can develop an efficient workflow for your annotation projects. Remember to:
@@ -287,12 +278,6 @@ The Text Annotation Interface provides a robust environment for qualitative data
 - Organize your codes effectively
 - Use the analysis tools to gain insights
 - Follow best practices for consistent results
-
-## References
-
-```{r bibliography, echo=FALSE, results='asis'}
-# Add your bibliography here if needed
-```
 
 ---
 

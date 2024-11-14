@@ -2,16 +2,30 @@
 % Please edit documentation in R/annotate_gui.R
 \name{calculate_co_occurrences}
 \alias{calculate_co_occurrences}
-\title{Helper function to calculate co-occurrences}
+\title{Calculate code co-occurrences in annotations}
 \usage{
 calculate_co_occurrences(annotations)
 }
 \arguments{
-\item{annotations}{Data frame of annotations}
+\item{annotations}{Data frame containing annotations with columns:
+\itemize{
+\item start: numeric, starting position of annotation
+\item end: numeric, ending position of annotation
+\item code: character, code identifier
+}}
 }
 \value{
-Table of co-occurrence frequencies
+Table object containing frequencies of code pairs that co-occur,
+with code pair names as "code1 & code2"
 }
 \description{
-Helper function to calculate co-occurrences
+Analyzes text annotations to identify and count instances where different codes
+overlap or co-occur in the same text regions. Handles edge cases and provides
+error-safe operation.
 }
+\details{
+Co-occurrences are identified by finding overlapping text regions between
+different code annotations. The function sorts annotations by position and
+checks for overlaps between each pair of annotations.
+}
+\keyword{internal}

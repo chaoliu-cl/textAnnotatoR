@@ -29,22 +29,4 @@ Provides null coalescing functionality, returning the first non-NULL argument
 
 \\%||\\% operator
 }
-\examples{
-\dontrun{
-x <- NULL
-y <- 5
-x \%||\% y  # Returns 5
-
-x <- 10
-x \%||\% y  # Returns 10
-}
-\dontrun{
-x <- NULL
-y <- 5
-x \%||\% y  # Returns 5
-
-x <- 10
-x \%||\% y  # Returns 10
-}
-}
 \keyword{internal}

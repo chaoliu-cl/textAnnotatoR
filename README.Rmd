@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 
 ```{r, echo = FALSE, results='asis'}
 cat("[![R-CMD-check](https://github.com/chaoliu-cl/textAnnotatoR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/chaoliu-cl/textAnnotatoR/actions/workflows/R-CMD-check.yaml)
-[![CRAN status](https://www.r-pkg.org/badges/version/textAnnotatoR)](https://CRAN.R-project.org/package=textAnnotatoR)
+  [![CRAN status](https://www.r-pkg.org/badges/version/textAnnotatoR)](https://CRAN.R-project.org/package=textAnnotatoR)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)")
 ```
 

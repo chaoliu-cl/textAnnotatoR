@@ -20,14 +20,4 @@ Character string containing formatted coverage analysis results
 Formats the results of coverage difference analysis into a human-readable
 string, handling both character and list inputs appropriately.
 }
-\examples{
-\dontrun{
-# With character input
-format_coverage_differences("Direct analysis result")
-
-# With list input
-differences <- list(density_summary = "Coverage density varies from 0.2 to 0.8")
-format_coverage_differences(differences)
-}
-}
 \keyword{internal}

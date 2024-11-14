@@ -30,30 +30,4 @@ for code highlights and formatting.
 Creates an HTML document containing the annotated text with proper styling
 for code highlights and formatting.
 }
-\examples{
-\dontrun{
-# Create HTML with annotations
-rv <- list(
-  text = "Sample text",
-  annotations = data.frame(
-    start = 1, end = 6,
-    code = "code1"
-  ),
-  code_colors = c(code1 = "#FF0000")
-)
-save_as_html("output.html", rv)
-}
-\dontrun{
-# Create HTML with annotations
-rv <- list(
-  text = "Sample text",
-  annotations = data.frame(
-    start = 1, end = 6,
-    code = "code1"
-  ),
-  code_colors = c(code1 = "#FF0000")
-)
-save_as_html("output.html", rv)
-}
-}
 \keyword{internal}

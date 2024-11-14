@@ -32,18 +32,4 @@ and clearing UI elements.
 Creates new project by resetting all reactive values to defaults
 and clearing UI elements.
 }
-\examples{
-\dontrun{
-# In Shiny server:
-observeEvent(input$new_project, {
-  create_new_project(rv, session)
-})
-}
-\dontrun{
-# In Shiny server:
-observeEvent(input$new_project, {
-  create_new_project(rv, session)
-})
-}
-}
 \keyword{internal}

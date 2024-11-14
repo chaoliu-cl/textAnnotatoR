@@ -23,24 +23,4 @@ and data structure validation during the loading process.
 Loads a previously saved project state from an RDS file. Performs version checking
 and data structure validation during the loading process.
 }
-\examples{
-\dontrun{
-# Load a project
-project_state <- load_project_state("project_name")
-
-# Check loaded components
-str(project_state$text)
-str(project_state$annotations)
-}
-
-\dontrun{
-# Load a project
-project_state <- load_project_state("project_name")
-
-# Check loaded components
-str(project_state$text)
-str(project_state$annotations)
-}
-
-}
 \keyword{internal}

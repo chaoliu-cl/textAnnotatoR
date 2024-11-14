@@ -19,13 +19,4 @@ Sanitizes directory paths for file export operations. This function ensures
 that export paths are valid, accessible, and secure before files are written.
 It handles path normalization and security checks for export operations.
 }
-\examples{
-\dontrun{
-# Clean export path
-export_path <- clean_export_path("my/export/path")
-
-# Clean and create directory if needed
-export_path <- clean_export_path("my/export/path", create = TRUE)
-}
-}
 \keyword{internal}

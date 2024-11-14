@@ -17,13 +17,4 @@ Character string containing formatted sequence analysis results
 Formats the results of sequence difference analysis into a human-readable
 string, processing both character and complex input types.
 }
-\examples{
-\dontrun{
-# With character input
-format_sequence_differences("Direct analysis result")
-
-# With complex input
-format_sequence_differences(list(some_results = "data"))
-}
-}
 \keyword{internal}

@@ -17,13 +17,4 @@ Character string containing formatted overlap analysis results
 Formats the results of overlap difference analysis into a human-readable
 string, processing both character and complex input types.
 }
-\examples{
-\dontrun{
-# With character input
-format_overlap_differences("Direct analysis result")
-
-# With complex input
-format_overlap_differences(list(some_results = "data"))
-}
-}
 \keyword{internal}

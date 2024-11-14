@@ -12,38 +12,33 @@
 #' @return Result of the expression or NULL if error occurs
 #'
 #' @importFrom shiny showNotification
-#'
-#' @examples
-#' \dontrun{
-#' # Basic usage
-#' result <- handle_error(
-#'   expr = { 1 + 1 },
-#'   success_msg = "Calculation completed"
-#' )
-#'
-#' # With error handling
-#' result <- handle_error(
-#'   expr = { 1 / 0 },
-#'   error_msg = "Division by zero detected",
-#'   finally_msg = "Operation finished"
-#' )
-#' }
-#'
 #' @keywords internal
 handle_error <- function(expr, success_msg = NULL, error_msg = NULL, finally_msg = NULL) {
+  is_shiny <- requireNamespace("shiny", quietly = TRUE) &&
+    exists("session") &&
+    !is.null(get0("session"))
+
+  notify <- function(msg, type = "message") {
+    if (is_shiny) {
+      shiny::showNotification(msg, type = type)
+    } else {
+      message(msg)
+    }
+  }
+
   tryCatch({
     result <- expr
     if (!is.null(success_msg)) {
-      showNotification(success_msg, type = "message")
+      notify(success_msg, "message")
     }
     return(result)
   }, error = function(e) {
     msg <- if (is.null(error_msg)) paste("Error:", e$message) else error_msg
-    showNotification(msg, type = "error")
+    notify(msg, "error")
     return(NULL)
   }, finally = {
     if (!is.null(finally_msg)) {
-      showNotification(finally_msg, type = "message")
+      notify(finally_msg, "message")
     }
   })
 }
@@ -55,18 +50,6 @@ handle_error <- function(expr, success_msg = NULL, error_msg = NULL, finally_msg
 #' Creates the directory if it doesn't exist.
 #'
 #' @return Character string containing the project directory path, or NULL if creation fails
-#'
-#' @examples
-#' \dontrun{
-#' # Get project directory
-#' project_dir <- get_project_dir()
-#'
-#' # Check if directory exists
-#' if (!is.null(project_dir)) {
-#'   list.files(project_dir)
-#' }
-#' }
-#'
 #' @importFrom shiny showNotification
 #' @keywords internal
 get_project_dir <- function() {
@@ -103,26 +86,6 @@ get_project_dir <- function() {
 #' @param filename Character string specifying the filename for saving
 #'
 #' @return Invisible NULL. Called for side effect of saving project state.
-#'
-#' @examples
-#' \dontrun{
-#' state <- list(
-#'   text = "Sample text",
-#'   annotations = data.frame(
-#'     start = 1,
-#'     end = 5,
-#'     code = "code1",
-#'     stringsAsFactors = FALSE
-#'   ),
-#'   codes = "code1",
-#'   code_tree = Node$new("Root"),
-#'   code_colors = c(code1 = "#FF0000"),
-#'   memos = list(),
-#'   code_descriptions = list()
-#' )
-#' save_project_state(state, "my_project")
-#' }
-#'
 #' @importFrom utils packageVersion
 #' @keywords internal
 save_project_state <- function(state, filename) {
@@ -163,17 +126,6 @@ save_project_state <- function(state, filename) {
 #'
 #' @importFrom data.tree as.Node
 #' @importFrom utils packageVersion
-#'
-#' @examples
-#' \dontrun{
-#' # Load a project
-#' project_state <- load_project_state("project_name")
-#'
-#' # Check loaded components
-#' str(project_state$text)
-#' str(project_state$annotations)
-#' }
-#'
 #' @keywords internal
 load_project_state <- function(filename) {
   # Add .rds extension if not present
@@ -230,20 +182,6 @@ load_project_state <- function(filename) {
 #'   }
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' # Create HTML with annotations
-#' rv <- list(
-#'   text = "Sample text",
-#'   annotations = data.frame(
-#'     start = 1, end = 6,
-#'     code = "code1"
-#'   ),
-#'   code_colors = c(code1 = "#FF0000")
-#' )
-#' save_as_html("output.html", rv)
-#' }
 #' @keywords internal
 save_as_html <- function(filename, rv) {
   # Get the current state of the text display
@@ -280,18 +218,6 @@ save_as_html <- function(filename, rv) {
 #'   }
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' rv <- list(
-#'   text = "Sample text",
-#'   annotations = data.frame(
-#'     start = 1, end = 6,
-#'     code = "code1"
-#'   )
-#' )
-#' save_as_text("output.txt", rv)
-#' }
 #' @keywords internal
 save_as_text <- function(filename, rv) {
   # Get the annotated text
@@ -317,32 +243,6 @@ save_as_text <- function(filename, rv) {
 #'   }
 #'
 #' @return Character string containing formatted text with code markers
-#'
-#' @examples
-#' \dontrun{
-#' # Simple example with one annotation
-#' text <- "This is a sample text"
-#' annotations <- data.frame(
-#'   start = 1,
-#'   end = 4,
-#'   code = "code1",
-#'   stringsAsFactors = FALSE
-#' )
-#' result <- create_plain_text_annotations(text, annotations)
-#' # Result will be: "[code1: This] is a sample text"
-#'
-#' # Example with multiple annotations
-#' text <- "The quick brown fox"
-#' annotations <- data.frame(
-#'   start = c(1, 10),
-#'   end = c(3, 15),
-#'   code = c("article", "adjective"),
-#'   stringsAsFactors = FALSE
-#' )
-#' result <- create_plain_text_annotations(text, annotations)
-#' # Result will be: "[article: The] quick [adjective: brown fox]"
-#' }
-#'
 #' @keywords internal
 create_plain_text_annotations <- function(text, annotations) {
   if (nrow(annotations) == 0) {
@@ -383,14 +283,6 @@ create_plain_text_annotations <- function(text, annotations) {
 #' @param volumes List of available storage volumes
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' # In Shiny server function:
-#' observeEvent(input$save_button, {
-#'   save_project_interactive(rv, input, session, volumes)
-#' })
-#' }
 #' @keywords internal
 save_project_interactive <- function(rv, input, session, volumes) {
   showModal(modalDialog(
@@ -422,14 +314,6 @@ save_project_interactive <- function(rv, input, session, volumes) {
 #' @param roots List of root directories for file selection
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' # In Shiny server function:
-#' observeEvent(input$load_button, {
-#'   load_project_interactive(rv, input, session, roots)
-#' })
-#' }
 #' @keywords internal
 load_project_interactive <- function(rv, input, session, roots) {
   showModal(modalDialog(
@@ -466,14 +350,6 @@ load_project_interactive <- function(rv, input, session, roots) {
 #' @param session Shiny session object
 #'
 #' @return Invisible NULL, called for side effect
-#'
-#' @examples
-#' \dontrun{
-#' # In Shiny server:
-#' observeEvent(input$new_project, {
-#'   create_new_project(rv, session)
-#' })
-#' }
 #' @keywords internal
 create_new_project <- function(rv, session) {
   rv$text <- ""
