@@ -1333,8 +1333,6 @@ annotate_gui <- function() {
       runjs("initializeSelection();")
     })
 
-
-
     # Save project confirmation handler
     observeEvent(input$confirm_save_project, {
       req(input$project_name)
