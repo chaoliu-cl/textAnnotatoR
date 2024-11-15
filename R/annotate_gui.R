@@ -1062,7 +1062,7 @@ annotate_gui <- function() {
       ))
     })
 
-    # Add this observer for handling code merging
+    # Observer for handling code merging
     observeEvent(input$confirm_merge_codes, {
       req(input$codes_to_merge, input$new_code_name)
 
