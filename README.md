@@ -144,4 +144,3 @@ citation("textAnnotatoR")
   page](https://github.com/chaoliu-cl/textAnnotatoR/issues)
 - Email: <chaoliu@cedarville.edu>
 - X: [@X](https://x.com/ChaoLiu77600168)
-

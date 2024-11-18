@@ -1062,7 +1062,7 @@ annotate_gui <- function() {
       ))
     })
 
-    # Observer for handling code merging
+    # Add this observer for handling code merging
     observeEvent(input$confirm_merge_codes, {
       req(input$codes_to_merge, input$new_code_name)
 
@@ -1332,6 +1332,8 @@ annotate_gui <- function() {
       toggle("floating_text_window")
       runjs("initializeSelection();")
     })
+
+
 
     # Save project confirmation handler
     observeEvent(input$confirm_save_project, {
