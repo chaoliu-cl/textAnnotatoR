@@ -101,7 +101,7 @@ annotate_gui()
 
 This launches the interactive interface where users can import texts, create codes, and begin their analysis. The tool supports a complete workflow from initial coding to final analysis and reporting.
 
-![textAnnotatoR main interface showing the project management toolbar, text import panel, and various analysis tabs for coding and analysis](interface_screenshot.png)
+![textAnnotatoR main interface showing the project management toolbar, text import panel, and various analysis tabs for coding and analysis](./man/figures/interface_screenshot.png)
 
 *Figure 1: The main interface of textAnnotatoR showing key features including project management options (top), file import functionality (left panel), and various tabs for coding, theme organization, analysis, and comparison.*
 
