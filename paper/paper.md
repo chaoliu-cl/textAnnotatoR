@@ -1,5 +1,5 @@
 ---
-title: 'textAnnotatoR: An Interactive Text Annotation Tool with 'shiny' GUI'
+title: 'textAnnotatoR: An Interactive Text Annotation Tool with ''shiny'' GUI'
 tags:
   - R
   - text analysis
@@ -10,11 +10,9 @@ authors:
   - name: Chao Liu
     orcid: 0000-0002-9979-8272
     affiliation: 1
-
 affiliations:
-  - index: 1
-    name: Cedarville University
-
+  - name: Cedarville University
+    index: 1
 date: 18 November 2024
 bibliography: paper.bib
 ---
