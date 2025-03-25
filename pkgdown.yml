@@ -3,7 +3,7 @@ pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   textAnnotatoR_gui: textAnnotatoR_gui.html
-last_built: 2025-03-24T15:29Z
+last_built: 2025-03-25T01:51Z
 urls:
   reference: http://liu-chao.site/textAnnotatoR/reference
   article: http://liu-chao.site/textAnnotatoR/articles
