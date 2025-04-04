@@ -2,7 +2,7 @@
 % Please edit documentation in R/directory_management.R
 \name{init_data_dir}
 \alias{init_data_dir}
-\title{Initialize data directory with user confirmation}
+\title{Initialize data directory with user confirmation and location choice}
 \usage{
 init_data_dir(session)
 }
@@ -14,7 +14,7 @@ Character string containing the path to the data directory, or NULL if declined
 }
 \description{
 Creates and initializes the package data directory after obtaining explicit
-user confirmation. Uses R_user_dir to create directory in user's home space
-only after approval.
+user confirmation. Allows users to choose between the default location or
+a custom directory of their choice.
 }
 \keyword{internal}

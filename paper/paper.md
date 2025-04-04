@@ -25,17 +25,31 @@ The package facilitates the entire workflow of qualitative text analysis, from i
 
 # Statement of need
 
-Qualitative text analysis is a key research method in the social sciences, humanities, and other fields that require in-depth understanding of textual content. While commercial software packages such as ATLAS.ti, MAXQDA, and NVivo are available for qualitative data analysis (QDA), they are often expensive and offer limited compatibility with other research tools [hart2017qualitative]. The discontinuation of RQDA, a once-popular open-source QDA software [huang2014rqda], has further created a gap for social scientists seeking robust and cost-effective tools for coding and analyzing qualitative data. This gap is particularly evident among researchers and students who use R for quantitative analysis, as they lack integrated options for performing qualitative analysis within the same computational environment.
+Qualitative text analysis is a key research methodology in social sciences, humanities, education, and other fields requiring in-depth understanding of textual data. While commercial software packages such as ATLAS.ti, MAXQDA, and NVivo offer robust functionality for qualitative data analysis (QDA), they are often expensive and offer limited compatibility with other research tools [hart2017qualitative]. The discontinuation of RQDA, a once-popular open-source QDA software [huang2014rqda], has further created a gap for researchers seeking cost-effective tools for coding and analyzing qualitative data.
 
-textAnnotatoR addresses these needs by providing:
+## Positioning textAnnotatoR in the Landscape of Qualitative Analysis Tools
 
-- An open-source alternative to commercial QDA software
-- Seamless integration with the R ecosystem
-- Interactive text annotation capabilities
-- Hierarchical code organization
-- Built-in analytical tools for code pattern analysis
-- Export functionality for further analysis
-- Version control compatibility
+The qualitative research software landscape includes several open-source alternatives such as Taguette, LaMa, qc, and corporaexplorer, each with distinct strengths and limitations:
+
+- **Taguette** [Rampin2021] offers a user-friendly interface for text annotation with hierarchical coding but lacks integration with the R ecosystem and advanced analytical capabilities.
+
+- **LaMa** [Bogachenkova2023] excels in collaborative labeling and conflict resolution but primarily focuses on thematic labeling rather than comprehensive qualitative analysis.
+
+- **qc** [Proctor2024] supports computational thinking in qualitative analysis through a command-line interface but may present a steep learning curve for researchers without programming experience.
+
+- **corporaexplorer** [Gjerde2019] provides powerful visualization of large text collections but is primarily designed for corpus exploration rather than detailed coding and analysis.
+
+textAnnotatoR addresses key gaps in these existing tools by providing:
+
+1. **Seamless R integration**: Unlike standalone applications, textAnnotatoR operates within the R environment, allowing researchers to leverage R's statistical and visualization capabilities alongside qualitative analysis.
+
+2. **Interactive coding within a familiar environment**: The Shiny-based GUI provides an intuitive interface for researchers who want the convenience of interactive coding without leaving their R workflow.
+
+3. **Comprehensive annotation capabilities**: textAnnotatoR supports not only basic code application but also hierarchical code organization, memo creation, and flexible project management.
+
+4. **Reproducible research workflows**: By functioning within the R ecosystem, textAnnotatoR enables researchers to document their entire analysis workflow, from data preprocessing to visualization, in reproducible R scripts.
+
+5. **Flexible data import/export**: textAnnotatoR streamlines the import of various text formats and provides multiple export options, facilitating interoperability with other research tools.
 
 Additionally, textAnnotatoR incorporates quantitative descriptive analyses of qualitative coding to support the integration of qualitative and quantitative methods and enhance reproducible research workflows.
 

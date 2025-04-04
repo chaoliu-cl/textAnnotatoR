@@ -4,7 +4,7 @@
 \alias{update_text_display}
 \title{Update text display with annotations}
 \usage{
-update_text_display(rv)
+update_text_display()
 }
 \arguments{
 \item{rv}{Reactive values object containing text and annotations}

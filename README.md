@@ -1,4 +1,6 @@
 
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
 # textAnnotatoR: Interactive Text Annotation Tool for R
 
 [![R-CMD-check](https://github.com/chaoliu-cl/textAnnotatoR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/chaoliu-cl/textAnnotatoR/actions/workflows/R-CMD-check.yaml)
@@ -9,134 +11,138 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 
 ## Overview
 
-textAnnotatoR is a comprehensive text annotation tool built with Shiny,
-designed to facilitate qualitative data analysis through an intuitive
-graphical user interface. It provides researchers, analysts, and
-qualitative data scientists with a robust environment for coding text
-documents, managing code hierarchies, creating memos, and analyzing
-coding patterns. The package supports collaborative research through
-standardized annotation formats and provides powerful tools for
-comparing two coding sets, analyzing code co-occurrences, and
-visualizing coding patterns.
+`textAnnotatoR` provides an interactive graphical user interface for
+qualitative text analysis in R. The package allows researchers,
+students, and practitioners to annotate text, manage codes, create
+memos, and visualize coding patterns through an intuitive Shiny
+interface.
 
 ## Key Features
 
-- Interactive text selection and annotation
-- Hierarchical code organization with themes
-- Real-time memo creation and linking
-- Code co-occurrence analysis and visualization
-- Multi-coder comparison tools
-- Project management capabilities
-- Export options for annotated text and analysis results
+- **Interactive Text Annotation**: Select and code text segments
+  directly within the GUI
+- **Code Management**: Create, organize, and merge codes with a
+  hierarchical structure
+- **Theme Organization**: Group related codes into themes with a
+  tree-based hierarchy
+- **Memo Creation**: Attach notes and observations to annotations
+- **Advanced Visualization**: Analyze code frequencies, co-occurrences,
+  and patterns
+- **Comparison Tools**: Compare coding patterns between different coders
+  or documents
+- **Project Management**: Save, load, and manage annotation projects
+- **Export Options**: Save annotations and coded text in various formats
+  (CSV, JSON, HTML)
+- **R Integration**: Seamlessly combine with other R packages for
+  advanced analysis
 
 ## Installation
 
-You can install the development version of textAnnotatoR from GitHub
-using:
-
 ``` r
-# Install textAnnotatoR
-- From CRAN: 
-install.packages('textAnnotatoR')
-- From Github:
-remotes::install_github("chaoliu-cl/textAnnotatoR")
+# Install from CRAN
+install.packages("textAnnotatoR")
+
+# Or install the development version from GitHub
+# install.packages("devtools")
+devtools::install_github("chaoliu-cl/textAnnotatoR")
 ```
 
-## Quick Start Example
+## Getting Started
 
-Here’s a basic example of how to launch the annotation interface and
-start coding your text:
+Launch the annotation interface with a simple function call:
 
 ``` r
 library(textAnnotatoR)
-
-# Launch the annotation interface
 annotate_gui()
 ```
 
-This will open the Shiny application in your default web browser. From
-there, you can:
+This opens the Shiny application in your default web browser. The
+interface includes a toolbar for project management, a tabbed main area
+for different functions, and a text display area.
 
-1.  Import your text document (supports .txt, .docx, and .pdf)
-2.  Select text using the cursor tool
-3.  Apply codes and create memos
-4.  Organize codes into themes
-5.  Analyze coding patterns and co-occurrences
+## Basic Usage
 
-## Package Components
-
-The package is structured around several main components:
-
-### Core Interface
-
-- `annotate_gui()`: The main function that launches the interactive
-  interface
-- Project management tools for saving and loading annotation projects
-- Text import and display functionality
-
-### Code Management
-
-- Hierarchical code organization with themes
-- Code merging and renaming capabilities
-- Color-coded visualization of annotations
-
-### Analysis Tools
-
-- Code frequency analysis
-- Co-occurrence analysis with network and heatmap visualizations
-- Pattern recognition for code sequences
-- Multi-coder comparison tools
-
-### Export Capabilities
-
-- Export annotations in CSV or JSON format
-- Save annotated text with highlighting
-- Generate analysis reports and visualizations
+1.  **Create a New Project**: Click “New Project” in the top toolbar
+2.  **Import Text**: Go to the “File” tab, upload your text document
+    (.txt, .docx, .pdf)
+3.  **Annotate Text**: Select text segments and apply codes
+4.  **Organize Codes**: Create a hierarchical structure of themes and
+    codes
+5.  **Analyze Patterns**: Use the analysis tools to explore your coding
+6.  **Export Results**: Save your annotations and analysis for further
+    use
 
 ## Documentation
 
-For more detailed information, please refer to the package vignettes:
+Comprehensive documentation is available through vignettes:
 
 ``` r
-# View available vignettes
-browseVignettes("textAnnotatoR")
+# List available vignettes
+vignette(package = "textAnnotatoR")
+
+# Read specific vignettes
+vignette("practical_example", package = "textAnnotatoR")
+vignette("technical_integration", package = "textAnnotatoR")
 ```
 
-Key vignettes include: - Getting Started with textAnnotatoR - Managing
-Code Hierarchies - Analyzing Coding Patterns - Comparing Multiple Coders
+## Advanced Features
 
-## Ecosystem Integration
+### Code Hierarchies
 
-textAnnotatoR is designed to work seamlessly with the broader R
-ecosystem for qualitative data analysis:
+Create and manage hierarchical code structures with themes and
+subthemes:
 
-- Imports text from common document formats using `readtext`
-- Utilizes `data.tree` for efficient hierarchy management
-- Leverages `shiny` and `shinydashboard` for the interactive interface
-- Integrates with `DT` for data display and manipulation
+- Use “Add Theme” to create organizational categories
+- Group related codes under appropriate themes
+- Visualize the hierarchy in a tree structure
 
-The package fills a gap in the R qualitative analysis ecosystem by
-providing a user-friendly GUI while maintaining programmatic access to
-all functionality.
+### Co-occurrence Analysis
+
+Explore relationships between different codes:
+
+- Identify patterns of code co-occurrence
+- Visualize connections through network graphs
+- Examine statistical measures of code relationships
+
+### Comparison Tools
+
+Compare coding patterns between different coders or documents:
+
+- Upload two annotation sets
+- Analyze similarities and differences
+- Visualize comparative patterns
+
+### Data Export
+
+Export your annotations in various formats:
+
+- CSV for quantitative analysis
+- JSON for web applications
+- HTML for formatted viewing with code highlighting
+
+## Integration with R Ecosystem
+
+`textAnnotatoR` is designed to work seamlessly with other R packages:
+
+- **tidytext**: For text mining and natural language processing
+- **quanteda**: For advanced text analysis
+- **igraph/ggraph**: For network visualizations of code relationships
+- **rmarkdown/shiny**: For reporting and interactive dashboards
+
+## System Requirements
+
+- R version 4.0.0 or higher
+- Shiny and its dependencies
+- A modern web browser
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-For major changes, please open an issue first to discuss what you would
-like to change.
+Contributions to `textAnnotatoR` are welcome! Please feel free to submit
+issues or pull requests on GitHub.
 
 ## License
 
-This project is licensed under the GPL-3 License - see the
-[LICENSE](LICENSE) file for details.
-
-## Citation
-
-If you use textAnnotatoR in your research, please cite it as:
-
-``` r
-citation("textAnnotatoR")
-```
+This package is licensed under the GPL-3 License.
 
 ## Contact
 

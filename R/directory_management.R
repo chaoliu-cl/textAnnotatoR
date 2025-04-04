@@ -1,34 +1,107 @@
-#' Initialize data directory with user confirmation
+#' Initialize data directory with user confirmation and location choice
 #'
 #' @description
 #' Creates and initializes the package data directory after obtaining explicit
-#' user confirmation. Uses R_user_dir to create directory in user's home space
-#' only after approval.
+#' user confirmation. Allows users to choose between the default location or
+#' a custom directory of their choice.
 #'
 #' @param session Shiny session object for displaying confirmation dialog
 #' @return Character string containing the path to the data directory, or NULL if declined
 #' @importFrom tools R_user_dir
-#' @importFrom shiny showModal modalDialog
+#' @importFrom shiny showModal modalDialog selectInput
 #' @keywords internal
-init_data_dir <- function(session) {
-  data_dir <- tools::R_user_dir("textAnnotatoR", "data")
+init_data_dir <- function(session = NULL) {
+  # If session is NULL, use a default directory path
+  if (is.null(session)) {
+    default_dir <- tools::R_user_dir("textAnnotatoR", "data")
+    if (!dir.exists(default_dir)) {
+      dir.create(default_dir, recursive = TRUE, showWarnings = FALSE)
+    }
+    return(default_dir)
+  }
 
-  if (!dir.exists(data_dir)) {
-    # Show confirmation dialog
+  default_dir <- tools::R_user_dir("textAnnotatoR", "data")
+  session$userData$custom_dir <- NULL
+
+  if (!dir.exists(default_dir)) {
+    # Set up roots for shinyFiles
+    roots <- c(Home = path.expand("~"))
+    if (.Platform$OS.type == "windows") {
+      roots <- c(roots, getVolumes()())
+    }
+
+    # Initialize directory chooser before showing the modal
+    shinyFiles::shinyDirChoose(input = session$input,
+                               id = "custom_dir_select",
+                               roots = roots,
+                               session = session,
+                               restrictions = system.file(package = "base"))
+
+    # Show confirmation dialog with location options
     showModal(modalDialog(
-      title = "Permission Required",
-      sprintf("textAnnotatoR needs to create a directory at:\n%s\nto store your annotation projects. Do you approve?", data_dir),
+      title = "Choose Storage Location",
+      tags$p("textAnnotatoR needs to create a directory to store your annotation projects."),
+      selectInput("storage_location", "Select storage location:",
+                  choices = c("Default Location" = "default",
+                              "Custom Location" = "custom")),
+      conditionalPanel(
+        condition = "input.storage_location == 'custom'",
+        tags$div(style = "margin-bottom: 15px;",
+                 # KEY CHANGE: Use shinyDirButton instead of actionButton
+                 shinyFiles::shinyDirButton("custom_dir_select",
+                                            "Choose Directory",
+                                            "Select Directory for Data Storage",
+                                            icon = icon("folder-open")),
+                 tags$div(id = "selected_dir_container", style = "margin-top: 10px;",
+                          tags$p("Currently selected: ",
+                                 tags$span(id = "custom_dir_path",
+                                           style = "font-weight: bold;",
+                                           "No directory selected"))
+                 )
+        )
+      ),
+      tags$div(id = "default_dir_info",
+               conditionalPanel(
+                 condition = "input.storage_location == 'default'",
+                 tags$p("Default location: ",
+                        tags$span(style = "font-weight: bold;", default_dir))
+               )
+      ),
       footer = tagList(
-        modalButton("Decline"),
-        actionButton("confirm_create_dir", "Approve")
+        modalButton("Cancel"),
+        actionButton("confirm_data_dir", "Confirm & Create Directory")
       ),
       easyClose = FALSE
     ))
 
+    # Add JavaScript to handle interactivity and UI updates
+    shinyjs::runjs("
+      $(document).ready(function() {
+        $('#storage_location').on('change', function() {
+          if ($(this).val() === 'custom') {
+            $('#selected_dir_container').show();
+            $('#default_dir_info').hide();
+          } else {
+            $('#selected_dir_container').hide();
+            $('#default_dir_info').show();
+          }
+        });
+
+        // Initialize the UI based on current selection
+        if ($('#storage_location').val() === 'custom') {
+          $('#selected_dir_container').show();
+          $('#default_dir_info').hide();
+        } else {
+          $('#selected_dir_container').hide();
+          $('#default_dir_info').show();
+        }
+      });
+    ")
+
     return(NULL) # Return NULL initially, actual creation happens after confirmation
   }
 
-  return(data_dir)
+  return(default_dir)
 }
 
 #' Get project directory path
@@ -37,13 +110,20 @@ init_data_dir <- function(session) {
 #' Retrieves or creates the project directory path where all project files will be stored.
 #' Creates the directory if it doesn't exist.
 #'
+#' @param rv ReactiveValues object containing application state (optional)
 #' @return Character string containing the project directory path, or NULL if creation fails
 #' @importFrom shiny showNotification
 #' @keywords internal
-get_project_dir <- function() {
+get_project_dir <- function(rv = NULL) {
   project_dir <- handle_error(
     expr = {
-      data_dir <- init_data_dir()
+      # If rv is provided and has a data_dir, use that
+      data_dir <- if (!is.null(rv) && !is.null(rv$data_dir)) {
+        rv$data_dir
+      } else {
+        tools::R_user_dir("textAnnotatoR", "data")
+      }
+
       project_dir <- file.path(data_dir, "projects")
       if (!dir.exists(project_dir)) {
         dir.create(project_dir, recursive = TRUE)
@@ -53,6 +133,35 @@ get_project_dir <- function() {
     error_msg = "Failed to create or access project directory"
   )
   return(project_dir)
+}
+
+#' Handle custom directory selection
+#'
+#' @description
+#' Opens a directory selection dialog and updates the UI with the selected path.
+#'
+#' @param input Shiny input object
+#' @param output Shiny output object
+#' @param session Shiny session object
+#' @param roots List of root directories for selection
+#' @return Character string containing the selected directory path
+#' @importFrom shiny observeEvent
+#' @importFrom shinyFiles shinyDirChoose parseDirPath
+#' @keywords internal
+handle_custom_dir_selection <- function(input, output, session, roots) {
+  # Initialize directory selection
+  shinyDirChoose(input, "custom_dir_select", roots = roots, session = session)
+
+  # Handle directory selection
+  observeEvent(input$custom_dir_select, {
+    selected_dir <- parseDirPath(roots, input$custom_dir_select)
+    if (length(selected_dir) > 0) {
+      session$userData$custom_dir <- selected_dir
+      # Update UI to show selected path using JavaScript
+      shinyjs::runjs(sprintf('document.getElementById("custom_dir_path").innerText = "%s";',
+                             gsub("\\\\", "\\\\\\\\", selected_dir)))
+    }
+  })
 }
 
 #' Get export directory
@@ -69,7 +178,7 @@ get_project_dir <- function() {
 get_export_dir <- function() {
   handle_error(
     expr = {
-      data_dir <- init_data_dir()
+      data_dir <- tools::R_user_dir("textAnnotatoR", "data")
       export_dir <- file.path(data_dir, "exports")
       if (!dir.exists(export_dir)) {
         dir.create(export_dir, recursive = TRUE)
@@ -168,7 +277,7 @@ validate_directory <- function(dir_path) {
 create_backup_dir <- function(max_backups = 3) {
   handle_error(
     expr = {
-      data_dir <- init_data_dir()
+      data_dir <- tools::R_user_dir("textAnnotatoR", "data")
       backup_dir <- file.path(data_dir, "backups")
 
       if (!dir.exists(backup_dir)) {

@@ -185,7 +185,7 @@ load_project_state <- function(filename) {
 #' @keywords internal
 save_as_html <- function(filename, rv) {
   # Get the current state of the text display
-  html_content <- update_text_display(rv)
+  html_content <- update_text_display()
 
   # Create a complete HTML document
   full_html <- paste0(

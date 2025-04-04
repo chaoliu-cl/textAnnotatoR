@@ -174,6 +174,8 @@ annotate_gui <- function() {
             margin-right: 50px;
           }
           #text_display {
+            white-space: pre-wrap;  /* This preserves line breaks in the display */
+            word-wrap: break-word;  /* Allows text to break at word boundaries */
             background-color: white;
             border: 1px solid #dee2e6;
             border-radius: 5px;
@@ -215,21 +217,24 @@ annotate_gui <- function() {
             height: calc(100% - 40px);
             overflow-y: auto;
           }
-          .theme-item, .code-item {
-            display: inline-block;
-            padding: 2px 4px;
-            border-radius: 3px;
-            transition: background-color 0.2s;
+          .root-item {
+            font-weight: bold;
+            color: #333;
           }
-
-          .theme-item:hover, .code-item:hover {
+          .theme-item {
+            font-weight: bold;
+            color: #0275d8;
+          }
+          .code-item {
+            color: #5cb85c;
+          }
+          .root-item:hover, .theme-item:hover, .code-item:hover {
             background-color: rgba(0, 0, 0, 0.05);
+            cursor: pointer;
           }
-
-          .theme-item.selected, .code-item.selected {
+          .root-item.selected, .theme-item.selected, .code-item.selected {
             background-color: #e6f3ff;
           }
-
           #hierarchy_pre {
             font-family: monospace;
             line-height: 1.5;
@@ -335,11 +340,11 @@ annotate_gui <- function() {
                        ),
                        column(8,
                               wellPanel(
-                                h4("Code Hierarchy"),
+                                h4("Code & Theme Hierarchy"),  # Updated label
                                 uiOutput("hierarchy_view")
                               ),
                               wellPanel(
-                                h4("Theme Details"),
+                                h4("Selected Item Details"),  # Updated label
                                 uiOutput("theme_details")
                               )
                        )
@@ -471,16 +476,68 @@ annotate_gui <- function() {
     # Initialize directory with confirmation
     observe({
       if (is.null(rv$data_dir)) {
-        init_data_dir(session)
+        rv$data_dir <- init_data_dir(session)
       }
     })
 
-    # Handle directory confirmation
-    handle_dir_confirmation(input, rv, session)
+    # Set up roots for shinyFiles
+    roots <- c(Home = path.expand("~"))
+    if (.Platform$OS.type == "windows") {
+      roots <- c(roots, getVolumes()())
+    }
+
+    # Initialize directory choosers for other parts of the app
+    # Note: The custom_dir_select is already initialized in init_data_dir
+    shinyDirChoose(input, "directory_select", roots = roots, session = session)
+    shinyDirChoose(input, "text_directory_select", roots = roots, session = session)
+    shinyDirChoose(input, "records_directory_select", roots = roots, session = session)
+    shinyFileChoose(input, "file_select", roots = roots, session = session)
+
+    # Handle selected custom directory
+    observeEvent(input$custom_dir_select, {
+      selected_dir <- parseDirPath(roots, input$custom_dir_select)
+      if (length(selected_dir) > 0 && nchar(selected_dir) > 0) {
+        session$userData$custom_dir <- selected_dir
+        # Update UI to show selected path
+        shinyjs::runjs(sprintf('document.getElementById("custom_dir_path").innerText = "%s";',
+                               gsub("\\\\", "\\\\\\\\", selected_dir)))
+      }
+    }, ignoreInit = TRUE)
+
+    # Handle final confirmation of directory
+    observeEvent(input$confirm_data_dir, {
+      if (input$storage_location == "default") {
+        data_dir <- tools::R_user_dir("textAnnotatoR", "data")
+      } else {
+        # Get custom directory path
+        custom_dir <- session$userData$custom_dir
+        if (is.null(custom_dir) || !dir.exists(custom_dir)) {
+          showNotification("Invalid custom directory selected. Using default location.",
+                           type = "warning")
+          data_dir <- tools::R_user_dir("textAnnotatoR", "data")
+        } else {
+          data_dir <- file.path(custom_dir, "textAnnotatoR")
+        }
+      }
+
+      tryCatch({
+        dir.create(data_dir, recursive = TRUE, showWarnings = FALSE)
+        rv$data_dir <- data_dir
+        removeModal()
+        showNotification(paste("Directory created successfully at:", data_dir),
+                         type = "message")
+      }, error = function(e) {
+        showNotification(
+          sprintf("Failed to create directory: %s", e$message),
+          type = "error"
+        )
+        rv$data_dir <- NULL
+      })
+    })
 
     # Initialize code tree properties in an observe block
     observe({
-      rv$code_tree$type <- "theme"
+      rv$code_tree$type <- "root" # Changed from "theme" to "root"
       rv$code_tree$description <- "Root of the code hierarchy"
     })
 
@@ -816,38 +873,26 @@ annotate_gui <- function() {
     # Theme details output
     output$theme_details <- renderText({
       # React to theme selection
-      theme_name <- input$selected_theme
+      item_name <- input$selected_theme
 
-      if (is.null(theme_name)) {
-        return("No theme selected. Click on a theme in the hierarchy to view details.")
+      if (is.null(item_name)) {
+        return("No item selected. Click on a theme or code in the hierarchy to view details.")
       }
 
-      # Find the selected theme in the hierarchy
-      theme_node <- find_node_by_name(rv$code_tree, theme_name)
+      # Find the selected node in the hierarchy
+      selected_node <- find_node_by_name(rv$code_tree, item_name)
 
-      if (is.null(theme_node)) {
-        return(paste("Theme", theme_name, "not found in hierarchy."))
+      if (is.null(selected_node)) {
+        return(paste("Item", item_name, "not found in hierarchy."))
       }
 
-      # Count direct codes and sub-themes with proper error handling
-      n_codes <- sum(vapply(theme_node$children, function(x) {
-        tryCatch({
-          if (is.null(x$type)) return(FALSE)
-          x$type == "code"
-        }, error = function(e) FALSE)
-      }, logical(1)))
-
-      n_subthemes <- sum(vapply(theme_node$children, function(x) {
-        tryCatch({
-          if (is.null(x$type)) return(FALSE)
-          x$type == "theme"
-        }, error = function(e) FALSE)
-      }, logical(1)))
+      # Determine if it's a theme, code, or root
+      node_type <- if (!is.null(selected_node$type)) selected_node$type else "unknown"
 
       # Format the created timestamp safely
       created_time <- tryCatch({
-        if (!is.null(theme_node$created)) {
-          format(theme_node$created, "%Y-%m-%d %H:%M:%S")
+        if (!is.null(selected_node$created)) {
+          format(selected_node$created, "%Y-%m-%d %H:%M:%S")
         } else {
           format(Sys.time(), "%Y-%m-%d %H:%M:%S")
         }
@@ -855,52 +900,109 @@ annotate_gui <- function() {
 
       # Safe description handling
       description <- tryCatch({
-        if (!is.null(theme_node$description)) {
-          theme_node$description
+        if (!is.null(selected_node$description)) {
+          selected_node$description
         } else {
           "No description"
         }
       }, error = function(e) "No description")
 
-      # Build the output text
-      output_text <- paste0(
-        "Theme: ", theme_node$name, "\n",
-        "Description: ", description, "\n",
-        "Created: ", created_time, "\n",
-        "Number of direct codes: ", n_codes, "\n",
-        "Number of sub-themes: ", n_subthemes, "\n"
-      )
+      # Build the output text based on node type
+      if (node_type == "root") {
+        output_text <- paste0(
+          "Root Node: ", selected_node$name, "\n",
+          "Description: ", description, "\n",
+          "Created: ", created_time, "\n"
+        )
 
-      # Add code list if there are codes
-      if (n_codes > 0) {
-        codes <- tryCatch({
-          vapply(theme_node$children[vapply(theme_node$children, function(x) {
+        # Count direct themes and codes under root
+        n_themes <- sum(vapply(selected_node$children, function(x) {
+          if (is.null(x$type)) return(FALSE)
+          x$type == "theme"
+        }, logical(1)))
+
+        n_codes <- sum(vapply(selected_node$children, function(x) {
+          if (is.null(x$type)) return(FALSE)
+          x$type == "code"
+        }, logical(1)))
+
+        output_text <- paste0(output_text,
+                              "Number of direct themes: ", n_themes, "\n",
+                              "Number of direct codes: ", n_codes, "\n")
+      } else if (node_type == "theme") {
+        # Count direct codes and sub-themes with proper error handling
+        n_codes <- sum(vapply(selected_node$children, function(x) {
+          tryCatch({
             if (is.null(x$type)) return(FALSE)
             x$type == "code"
-          }, logical(1))], function(x) x$name, character(1))
-        }, error = function(e) character(0))
+          }, error = function(e) FALSE)
+        }, logical(1)))
 
-        if (length(codes) > 0) {
-          output_text <- paste0(output_text,
-                                "\nCodes in this theme:\n",
-                                paste0("- ", codes, collapse = "\n"))
-        }
-      }
-
-      # Add sub-themes list if there are sub-themes
-      if (n_subthemes > 0) {
-        subthemes <- tryCatch({
-          vapply(theme_node$children[vapply(theme_node$children, function(x) {
+        n_subthemes <- sum(vapply(selected_node$children, function(x) {
+          tryCatch({
             if (is.null(x$type)) return(FALSE)
             x$type == "theme"
-          }, logical(1))], function(x) x$name, character(1))
-        }, error = function(e) character(0))
+          }, error = function(e) FALSE)
+        }, logical(1)))
 
-        if (length(subthemes) > 0) {
-          output_text <- paste0(output_text,
-                                "\n\nSub-themes:\n",
-                                paste0("- ", subthemes, collapse = "\n"))
+        output_text <- paste0(
+          "Theme: ", selected_node$name, "\n",
+          "Description: ", description, "\n",
+          "Created: ", created_time, "\n",
+          "Number of direct codes: ", n_codes, "\n",
+          "Number of sub-themes: ", n_subthemes, "\n"
+        )
+
+        # Add code list if there are codes
+        if (n_codes > 0) {
+          codes <- tryCatch({
+            vapply(selected_node$children[vapply(selected_node$children, function(x) {
+              if (is.null(x$type)) return(FALSE)
+              x$type == "code"
+            }, logical(1))], function(x) x$name, character(1))
+          }, error = function(e) character(0))
+
+          if (length(codes) > 0) {
+            output_text <- paste0(output_text,
+                                  "\nCodes in this theme:\n",
+                                  paste0("- ", codes, collapse = "\n"))
+          }
         }
+
+        # Add sub-themes list if there are sub-themes
+        if (n_subthemes > 0) {
+          subthemes <- tryCatch({
+            vapply(selected_node$children[vapply(selected_node$children, function(x) {
+              if (is.null(x$type)) return(FALSE)
+              x$type == "theme"
+            }, logical(1))], function(x) x$name, character(1))
+          }, error = function(e) character(0))
+
+          if (length(subthemes) > 0) {
+            output_text <- paste0(output_text,
+                                  "\n\nSub-themes:\n",
+                                  paste0("- ", subthemes, collapse = "\n"))
+          }
+        }
+      } else if (node_type == "code") {
+        output_text <- paste0(
+          "Code: ", selected_node$name, "\n",
+          "Description: ", description, "\n",
+          "Created: ", created_time, "\n"
+        )
+
+        # Find annotations that use this code
+        code_usage <- sum(rv$annotations$code == selected_node$name)
+        output_text <- paste0(output_text,
+                              "Used in ", code_usage, " annotation",
+                              ifelse(code_usage == 1, "", "s"))
+      } else {
+        output_text <- paste0(
+          "Item: ", selected_node$name, "\n",
+          "Type: Unknown\n",
+          "Description: ", description, "\n",
+          "Created: ", created_time, "\n"
+        )
       }
 
       return(output_text)
@@ -916,7 +1018,7 @@ annotate_gui <- function() {
       paths <- c("Root")  # Start with Root as the first option
 
       collect_paths <- function(node, current_path = character()) {
-        # Check if this node is a theme
+        # Check if this node is a theme (not root)
         if (!is.null(node$type) && node$type == "theme" && !is.null(node$name)) {
           if (length(current_path) > 0) {
             full_path <- paste(c(current_path, node$name), collapse = " / ")
@@ -1607,13 +1709,33 @@ annotate_gui <- function() {
 
       handle_error(
         expr = {
-          imported_text <- readtext(input$file_input$datapath)
-          rv$text <- imported_text$text
+          # Different handling based on file type
+          file_ext <- tolower(tools::file_ext(input$file_input$name))
+
+          if (file_ext == "txt") {
+            # For plain text files, read directly as text with line breaks preserved
+            text_content <- readLines(input$file_input$datapath, warn = FALSE)
+            rv$text <- paste(text_content, collapse = "\n")
+          } else {
+            # For other formats (docx, pdf), use readtext
+            imported_text <- readtext(input$file_input$datapath)
+            rv$text <- imported_text$text
+          }
+
+          # Update history
           rv$history <- c(rv$history[1:rv$history_index],
                           list(list(text = rv$text, annotations = rv$annotations)))
           rv$history_index <- rv$history_index + 1
+
+          # Update the text input field - use this approach to preserve line breaks
+          updateTextAreaInput(session, "text_input", value = rv$text)
+
+          # Force update of the text display
+          output$text_display <- renderUI({
+            HTML(update_text_display())
+          })
         },
-        success_msg = "Text imported successfully",
+        success_msg = "Text imported successfully with preserved line breaks",
         error_msg = "Failed to import text file"
       )
     })
@@ -3129,42 +3251,123 @@ load_selected_project <- function(rv, input, session, project_name) {
 #' @param rv Reactive values object containing text and annotations
 #' @return HTML string containing the formatted text with annotations
 #' @keywords internal
-update_text_display <- function(rv) {
+update_text_display <- function() {
+  # If there are no annotations, simply display the text with line breaks
   if (nrow(rv$annotations) == 0) {
-    return(paste0("<span class='char' id='char_", 1:nchar(rv$text), "'>",
-                  strsplit(rv$text, "")[[1]], "</span>", collapse = ""))
+    # Split the text into lines first to preserve line breaks
+    lines <- strsplit(rv$text, "\n", fixed = TRUE)[[1]]
+    html_text <- ""
+
+    char_counter <- 1
+    for (i in seq_along(lines)) {
+      line <- lines[i]
+      # For each character in the line
+      for (j in 1:nchar(line)) {
+        html_text <- paste0(html_text,
+                            '<span class="char" id="char_', char_counter, '">',
+                            substr(line, j, j), '</span>')
+        char_counter <- char_counter + 1
+      }
+
+      # Add a line break after each line (except the last line)
+      if (i < length(lines)) {
+        html_text <- paste0(html_text,
+                            '<span class="char" id="char_', char_counter, '">\n</span><br>')
+        char_counter <- char_counter + 1
+      }
+    }
+
+    return(html_text)
   }
 
+  # If there are annotations, handle them while preserving line breaks
   sorted_annotations <- rv$annotations[order(rv$annotations$start), ]
   displayed_text <- ""
   last_end <- 0
 
   for (i in 1:nrow(sorted_annotations)) {
     if (sorted_annotations$start[i] > last_end + 1) {
-      displayed_text <- paste0(displayed_text,
-                               paste0("<span class='char' id='char_", (last_end + 1):(sorted_annotations$start[i] - 1), "'>",
-                                      strsplit(substr(rv$text, last_end + 1, sorted_annotations$start[i] - 1), "")[[1]],
-                                      "</span>", collapse = ""))
+      # Text before annotation
+      segment <- substr(rv$text, last_end + 1, sorted_annotations$start[i] - 1)
+      # Handle line breaks in this segment
+      segment <- gsub("\n", "\n</span><br><span class=\"char\" id=\"char_", segment)
+
+      # Add the segment with proper character spans
+      char_counter <- last_end + 1
+      for (j in 1:nchar(segment)) {
+        if (substr(segment, j, j+1) == "\n") {
+          displayed_text <- paste0(displayed_text,
+                                   '<span class="char" id="char_', char_counter, '">\n</span><br>')
+          j <- j + 1  # Skip the extra character
+        } else {
+          displayed_text <- paste0(displayed_text,
+                                   '<span class="char" id="char_', char_counter, '">',
+                                   substr(segment, j, j), '</span>')
+        }
+        char_counter <- char_counter + 1
+      }
     }
+
+    # Handle the annotation
     code_color <- rv$code_colors[sorted_annotations$code[i]]
     if (is.null(code_color)) {
       code_color <- "#CCCCCC"  # Default color if not found
     }
+
+    # Get the annotated text
+    anno_text <- substr(rv$text, sorted_annotations$start[i], sorted_annotations$end[i])
+
+    # Start the annotation span
     displayed_text <- paste0(displayed_text,
-                             "<span class='code-display' style='background-color: ", code_color, ";' data-code='", sorted_annotations$code[i], "' data-start='", sorted_annotations$start[i], "' data-end='", sorted_annotations$end[i], "'>",
-                             "[", sorted_annotations$code[i], "]",
-                             paste0("<span class='char' id='char_", sorted_annotations$start[i]:sorted_annotations$end[i], "'>",
-                                    strsplit(substr(rv$text, sorted_annotations$start[i], sorted_annotations$end[i]), "")[[1]],
-                                    "</span>", collapse = ""),
-                             "</span>")
+                             '<span class="code-display" style="background-color: ',
+                             code_color, ';" data-code="', sorted_annotations$code[i],
+                             '" data-start="', sorted_annotations$start[i],
+                             '" data-end="', sorted_annotations$end[i], '">[',
+                             sorted_annotations$code[i], ']')
+
+    # Add the annotated text with line breaks preserved
+    for (j in sorted_annotations$start[i]:sorted_annotations$end[i]) {
+      char <- substr(rv$text, j, j)
+      if (char == "\n") {
+        displayed_text <- paste0(displayed_text,
+                                 '<span class="char" id="char_', j, '">\n</span><br>')
+      } else {
+        displayed_text <- paste0(displayed_text,
+                                 '<span class="char" id="char_', j, '">',
+                                 char, '</span>')
+      }
+    }
+
+    # Close the annotation span
+    displayed_text <- paste0(displayed_text, '</span>')
+
     last_end <- sorted_annotations$end[i]
   }
 
+  # Handle any remaining text after the last annotation
   if (last_end < nchar(rv$text)) {
-    displayed_text <- paste0(displayed_text,
-                             paste0("<span class='char' id='char_", (last_end + 1):nchar(rv$text), "'>",
-                                    strsplit(substr(rv$text, last_end + 1, nchar(rv$text)), "")[[1]],
-                                    "</span>", collapse = ""))
+    segment <- substr(rv$text, last_end + 1, nchar(rv$text))
+    # Split by line breaks to handle them properly
+    lines <- strsplit(segment, "\n", fixed = TRUE)[[1]]
+
+    char_counter <- last_end + 1
+    for (i in seq_along(lines)) {
+      line <- lines[i]
+      # For each character in the line
+      for (j in 1:nchar(line)) {
+        displayed_text <- paste0(displayed_text,
+                                 '<span class="char" id="char_', char_counter, '">',
+                                 substr(line, j, j), '</span>')
+        char_counter <- char_counter + 1
+      }
+
+      # Add a line break after each line (except the last line)
+      if (i < length(lines)) {
+        displayed_text <- paste0(displayed_text,
+                                 '<span class="char" id="char_', char_counter, '">\n</span><br>')
+        char_counter <- char_counter + 1
+      }
+    }
   }
 
   return(displayed_text)
@@ -3207,7 +3410,7 @@ concatenate_memos <- function(existing_memo, new_memo) {
 #' @keywords internal
 save_as_html <- function(filename, rv) {
   # Get the current state of the text display
-  html_content <- update_text_display(rv)
+  html_content <- update_text_display()
 
   # Create a complete HTML document
   full_html <- paste0(
@@ -4831,13 +5034,20 @@ visualize_hierarchy <- function(node) {
   print_tree <- function(node, indent = 0) {
     if (is.null(node)) return(character(0))
 
-    # Get node type symbol using Unicode escape sequences for emoji
-    symbol <- if (!is.null(node$type) && node$type == "theme")
-      "\U0001F4C2" else "\U0001F4C4"  # Folder emoji: 📂, File emoji: 📄
+    # Special handling for root node vs theme vs code
+    if (node$type == "root") {
+      symbol <- "\U0001F4C1"  # Closed folder emoji: 📁 for root
+      class_name <- "root-item"
+    } else if (node$type == "theme") {
+      symbol <- "\U0001F4C2"  # Open folder emoji: 📂 for themes
+      class_name <- "theme-item"
+    } else {
+      symbol <- "\U0001F4C4"  # File emoji: 📄 for codes
+      class_name <- "code-item"
+    }
 
     # Create the line for this node with proper data attributes and classes
     name_display <- if (!is.null(node$type)) {
-      class_name <- if (node$type == "theme") "theme-item" else "code-item"
       sprintf('<span class="%s" data-name="%s" data-type="%s">%s</span>',
               class_name, node$name, node$type, node$name)
     } else {
@@ -4962,6 +5172,7 @@ calculate_hierarchy_stats <- function(node) {
     # Check if node type exists and is a character
     node_type <- if (!is.null(node$type) && is.character(node$type)) node$type else "unknown"
 
+    # Only count as theme if it's explicitly a theme (not root)
     if (node_type == "theme") {
       n_themes <<- n_themes + 1
       # Count codes that are direct children of this theme
@@ -5009,7 +5220,7 @@ calculate_hierarchy_stats <- function(node) {
   # Start traversal from root node
   traverse_node(node)
 
-  # Calculate average codes per theme
+  # Calculate average codes per theme - handle division by zero
   avg_codes <- if (n_themes > 0) n_codes / n_themes else 0
 
   # Return statistics
@@ -5792,24 +6003,66 @@ plot_sequence_patterns <- function(sequences, main = "", ...) {
        cex = 0.7)
 }
 
-#' Handle directory creation confirmation
+#' Handle directory confirmation
 #'
 #' @description
-#' Creates the data directory after receiving user confirmation
+#' Creates the data directory after receiving user confirmation and handles
+#' custom directory selection
 #'
 #' @param input Shiny input object
 #' @param rv ReactiveValues object containing application state
 #' @param session Shiny session object
 #' @keywords internal
 handle_dir_confirmation <- function(input, rv, session) {
-  observeEvent(input$confirm_create_dir, {
-    data_dir <- tools::R_user_dir("textAnnotatoR", "data")
+  # Set up roots for directory chooser
+  roots <- c(Home = path.expand("~"))
+  if (.Platform$OS.type == "windows") {
+    roots <- c(roots, getVolumes()())
+  }
+
+  # Initialize directory chooser
+  shinyDirChoose(input, "custom_dir_select", roots = roots, session = session)
+
+  # Handle custom directory selection button click
+  observeEvent(input$choose_custom_dir, {
+    # This toggles the shinyFiles directory selection dialog
+    session$sendCustomMessage(type = "shinyDirectories.open",
+                              message = list(id = "custom_dir_select"))
+  })
+
+  # Handle selected directory
+  observeEvent(input$custom_dir_select, {
+    selected_dir <- parseDirPath(roots, input$custom_dir_select)
+    if (length(selected_dir) > 0 && nchar(selected_dir) > 0) {
+      session$userData$custom_dir <- selected_dir
+      # Update UI to show selected path
+      runjs(sprintf('document.getElementById("custom_dir_path").innerText = "%s";',
+                    gsub("\\\\", "\\\\\\\\", selected_dir)))
+    }
+  })
+
+  # Handle final confirmation
+  observeEvent(input$confirm_data_dir, {
+    if (input$storage_location == "default") {
+      data_dir <- tools::R_user_dir("textAnnotatoR", "data")
+    } else {
+      # Get custom directory path
+      custom_dir <- session$userData$custom_dir
+      if (is.null(custom_dir) || !dir.exists(custom_dir)) {
+        showNotification("Invalid custom directory selected. Using default location.",
+                         type = "warning")
+        data_dir <- tools::R_user_dir("textAnnotatoR", "data")
+      } else {
+        data_dir <- file.path(custom_dir, "textAnnotatoR")
+      }
+    }
 
     tryCatch({
       dir.create(data_dir, recursive = TRUE)
       rv$data_dir <- data_dir
       removeModal()
-      showNotification("Directory created successfully", type = "message")
+      showNotification(paste("Directory created successfully at:", data_dir),
+                       type = "message")
     }, error = function(e) {
       showNotification(
         sprintf("Failed to create directory: %s", e$message),
