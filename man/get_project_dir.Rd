@@ -11,6 +11,9 @@ get_project_dir()
 
 get_project_dir()
 }
+\arguments{
+\item{rv}{ReactiveValues object containing application state (optional)}
+}
 \value{
 Character string containing the project directory path, or NULL if creation fails
 

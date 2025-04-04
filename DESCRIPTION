@@ -36,7 +36,15 @@ Suggests:
     knitr,
     rmarkdown,
     covr,
-    mockery
+    mockery,
+    dplyr,
+    ggplot2,
+    ggraph,
+    igraph,
+    plotly,
+    quanteda,
+    quanteda.textstats,
+    tidytext
 URL: https://github.com/chaoliu-cl/textAnnotatoR, http://liu-chao.site/textAnnotatoR/
 BugReports: https://github.com/chaoliu-cl/textAnnotatoR/issues
 Config/testthat/edition: 3

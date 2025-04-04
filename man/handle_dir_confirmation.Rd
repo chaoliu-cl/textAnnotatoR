@@ -14,6 +14,7 @@ handle_dir_confirmation(input, rv, session)
 \item{session}{Shiny session object}
 }
 \description{
-Creates the data directory after receiving user confirmation
+Creates the data directory after receiving user confirmation and handles
+custom directory selection
 }
 \keyword{internal}

@@ -4,7 +4,7 @@
 \alias{init_data_dir}
 \title{Initialize data directory with user confirmation and location choice}
 \usage{
-init_data_dir(session)
+init_data_dir(session = NULL)
 }
 \arguments{
 \item{session}{Shiny session object for displaying confirmation dialog}
