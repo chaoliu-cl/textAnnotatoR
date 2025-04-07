@@ -6,9 +6,6 @@
 \usage{
 update_text_display()
 }
-\arguments{
-\item{rv}{Reactive values object containing text and annotations}
-}
 \value{
 HTML string containing the formatted text with annotations
 }

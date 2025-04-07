@@ -10,16 +10,23 @@ vignette: >
   %\VignetteIndexEntry{Technical Integration - Using textAnnotatoR with Other R Tools}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteDepends{dplyr, ggplot2}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.width = 7,
-  fig.height = 5,
+  fig.width = 4,
+  fig.height = 3,
   fig.align = 'center',
-  fig.path = "figures/"
+  dpi = 72,
+  out.width = "60%",
+  fig.retina = NULL,
+  dev = "png",
+  fig.path = "figures/",
+  message = FALSE,
+  warning = FALSE
 )
 library(textAnnotatoR)
 ```
@@ -36,7 +43,7 @@ Before integrating with other tools, let's explore the structure of textAnnotato
 
 textAnnotatoR project files (.rds) contain the following components:
 
-```{r echo = T, results = 'hide'}
+```{r echo = TRUE, results = 'hide'}
 # First, ensure the project directory exists and is initialized
 # We need to handle this explicitly when working outside the GUI
 initialize_project_directory <- function() {
@@ -61,50 +68,27 @@ initialize_project_directory <- function() {
 # Initialize the directory
 projects_dir <- initialize_project_directory()
 
-# Now load a project with an absolute path
-project_path <- file.path(projects_dir, "my_project.rds")
-
-# If you're loading an existing project file from another location,
-# you may need to copy it to the projects directory first
-if (file.exists("C:/Users/chaoliu/Downloads/my_project.rds")) {
-  file.copy("C:/Users/chaoliu/Downloads/my_project.rds", project_path)
-}
-
-# Load the project
-if (file.exists(project_path)) {
-  project <- readRDS(project_path)
-} else {
-  # If project doesn't exist, create a sample one for demonstration
-  project <- list(
-    text = "Sample interview text content...",
-    annotations = data.frame(
-      start = c(1, 50),
-      end = c(10, 60),
-      text = c("Sample", "interview"),
-      code = c("sample_code", "another_code"),
-      memo = c("Sample memo", "Another memo"),
-      stringsAsFactors = FALSE
-    ),
-    codes = c("sample_code", "another_code"),
-    code_tree = data.tree::Node$new("Root"),
-    code_colors = c("sample_code" = "#FF0000", "another_code" = "#00FF00"),
-    memos = list(),
-    code_descriptions = list()
-  )
-  
-  # Save the sample project
-  saveRDS(project, project_path)
-  cat("Created sample project at:", project_path, "\n")
-}
+# Create a sample project for demonstration
+project <- list(
+  text = "Sample interview text content for demonstration purposes. This text contains information about remote work challenges and benefits.",
+  annotations = data.frame(
+    start = c(1, 25, 50, 80),
+    end = c(10, 35, 60, 90),
+    text = c("Sample", "interview", "demonstration", "remote work"),
+    code = c("Sample", "Interview", "Demo", "Remote"),
+    memo = c("Example memo", "Interview note", "Demo note", "Remote note"),
+    stringsAsFactors = FALSE
+  ),
+  codes = c("Sample", "Interview", "Demo", "Remote"),
+  code_tree = data.tree::Node$new("Root"),
+  code_colors = c("Sample" = "#FF0000", "Interview" = "#00FF00", 
+                  "Demo" = "#0000FF", "Remote" = "#FFCC00"),
+  memos = list(),
+  code_descriptions = list()
+)
 
 # Structure of a project
 str(project, max.level = 1)
-#> List of 9
-#>  $ text             : chr "Interviewer: Can you describe your experience transitioning to remote work?\n\nParticipant: It was definitely c"| __truncated__
-#>  $ annotations      :'data.frame':	2 obs. of  5 variables:
-#>  $ codes            : chr [1:2] "Home Setup" "Boundary difficulty"
-#>  $ code_tree        :Classes 'Node', 'R6' <Node>
-#>  ...
 ```
 
 ## Annotation Data Frame
@@ -114,9 +98,6 @@ The core annotation data is stored in a standard R data frame:
 ```{r eval=TRUE}
 # View annotation structure
 head(project$annotations)
-#>   start   end                              text        code                   memo
-#> 1   125   174 setting up a proper workspace at home Home Setup Initial challenge in...
-#> 2   179   248 establishing boundaries between work... Work-Life Recurring theme in...
 ```
 
 This structure makes it readily compatible with standard R data manipulation tools.
@@ -127,37 +108,32 @@ This structure makes it readily compatible with standard R data manipulation too
 
 The [quanteda](https://quanteda.io/) package is a powerful framework for text analysis. Here's how to combine textAnnotatoR annotations with quanteda:
 
-```{r message=FALSE, warning=FALSE}
+```{r eval=TRUE}
 library(quanteda)
 library(quanteda.textstats)
 library(dplyr)
-```
 
-```{r eval=TRUE}
 # Extract annotations by code
-home_setup_texts <- project$annotations %>%
-  filter(code == "Home Setup") %>%
+sample_texts <- project$annotations %>%
+  filter(code == "Sample") %>%
   pull(text)
 
 # Create a corpus from these text segments
-home_corpus <- corpus(home_setup_texts)
+sample_corpus <- corpus(sample_texts)
 
 # Analyze with quanteda
-home_dfm <- dfm(tokens(home_corpus))
-textstat_frequency(home_dfm, n = 10)  # Top 10 words
+sample_dfm <- dfm(tokens(sample_corpus))
+textstat_frequency(sample_dfm, n = 5)  # Top 5 words
 ```
 
 ## Integration with tidytext
 
 The [tidytext](https://www.tidytextmining.com/) package works beautifully with textAnnotatoR outputs:
 
-```{r message=FALSE, warning=FALSE}
+```{r eval=FALSE}
 library(tidytext)
 library(ggplot2)
-```
 
-
-```{r eval = TRUE}
 # Convert annotations to tidy format
 tidy_annotations <- project$annotations %>%
   unnest_tokens(word, text) %>%
@@ -167,14 +143,14 @@ tidy_annotations <- project$annotations %>%
 word_frequencies <- tidy_annotations %>%
   count(code, word, sort = TRUE) %>%
   group_by(code) %>%
-  top_n(10, n)
+  top_n(5, n)
 
-# Visualize
+# Simple visualization
 ggplot(word_frequencies, aes(reorder(word, n), n, fill = code)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~code, scales = "free") +
   coord_flip() +
-  labs(title = "Top 10 Words by Code",
+  labs(title = "Top Words by Code",
        x = NULL,
        y = "Count")
 ```
@@ -183,26 +159,22 @@ ggplot(word_frequencies, aes(reorder(word, n), n, fill = code)) +
 
 ## Network Visualization with igraph
 
-textAnnotatoR's co-occurrence data can be visualized as networks:
+The following example demonstrates how to create network visualizations from co-occurrence patterns:
 
-```{r message=FALSE, warning=FALSE}
+```{r, eval=FALSE}
 library(igraph)
-library(ggraph)
-```
+library(ggplot2)
 
-
-```{r eval = TRUE}
-# Create a matrix of code co-occurrences
-# (This code assumes you've run analyze_co_occurrences or similar)
+# Create a simple matrix of code co-occurrences
+codes <- c("Home Setup", "Work-Life", "Tools", "Benefits")
 co_matrix <- matrix(c(
-  0, 3, 1, 0,
-  3, 0, 2, 4,
-  1, 2, 0, 2,
-  0, 4, 2, 0
+  0, 2, 1, 0,  # Home Setup
+  2, 0, 1, 3,  # Work-Life
+  1, 1, 0, 1,  # Tools
+  0, 3, 1, 0   # Benefits
 ), nrow = 4, byrow = TRUE)
 
-rownames(co_matrix) <- colnames(co_matrix) <- 
-  c("Home Setup", "Work-Life", "Tools", "Benefits")
+rownames(co_matrix) <- colnames(co_matrix) <- codes
 
 # Create a graph
 g <- graph_from_adjacency_matrix(
@@ -212,37 +184,39 @@ g <- graph_from_adjacency_matrix(
   diag = FALSE
 )
 
-# Plot with ggraph
-ggraph(g, layout = "fr") +
-  geom_edge_link(aes(width = weight), alpha = 0.7) +
-  geom_node_point(size = 7, color = "lightblue") +
-  geom_node_text(aes(label = name), repel = TRUE) +
-  theme_void() +
-  labs(title = "Code Co-occurrence Network")
+# Basic plot
+plot(g, 
+     vertex.color = "lightblue",
+     vertex.size = 30,
+     vertex.label.color = "black",
+     edge.width = E(g)$weight,
+     main = "Code Co-occurrence Network")
+```
+```{r, out.width = "400px", echo=FALSE}
+knitr::include_graphics("../man/figures/code_cooccurance.png")
 ```
 
-## Interactive Visualizations with plotly
+## Simple Visualizations with ggplot2
 
-Make your textAnnotatoR analyses interactive with plotly:
+Create static visualizations of your code frequencies:
 
-```{r message=FALSE, warning=FALSE}
-library(plotly)
-
+```{r, eval=FALSE}
 # Create a base ggplot with code frequencies
 code_freq <- data.frame(
-  code = project$codes,
-  frequency = sapply(project$codes, function(c) sum(project$annotations$code == c))
+  code = codes,
+  frequency = c(5, 8, 3, 6)
 )
 
-p <- ggplot(code_freq, aes(reorder(code, frequency), frequency, fill = code)) +
+# Create a simple bar chart
+ggplot(code_freq, aes(reorder(code, frequency), frequency, fill = code)) +
   geom_col() +
   coord_flip() +
   theme_minimal() +
-  labs(title = "Code Frequencies", x = "Code", y = "Frequency")
-
-# Convert to interactive plot
-ggplotly(p) %>%
-  layout(hoverlabel = list(bgcolor = "white"))
+  labs(title = "Example Code Frequencies", x = "Code", y = "Frequency") +
+  theme(legend.position = "none")
+```
+```{r, out.width = "400px", echo=FALSE}
+knitr::include_graphics("../man/figures/example_code_freq.png")
 ```
 
 # Batch Processing and Automation
@@ -278,15 +252,15 @@ process_document <- function(file_path, coding_scheme) {
   
   # Save as a textAnnotatoR project
   project_name <- paste0(basename(tools::file_path_sans_ext(file_path)), ".rds")
-  save_project_state(project, project_name)
+  saveRDS(project, file.path(projects_dir, project_name))
   
   cat("Processed:", file_path, "\n")
   return(project_name)
 }
 
-# Process a folder of documents
-files <- list.files("interview_transcripts", pattern = "*.txt", full.names = TRUE)
-processed_projects <- sapply(files, process_document, coding_scheme = master_scheme)
+# Example of processing a folder of documents
+# files <- list.files("interview_transcripts", pattern = "*.txt", full.names = TRUE)
+# processed_projects <- sapply(files, process_document, coding_scheme = master_scheme)
 ```
 
 ## Export to Other Formats
@@ -294,45 +268,14 @@ processed_projects <- sapply(files, process_document, coding_scheme = master_sch
 Convert textAnnotatoR annotations to formats compatible with other QDA software:
 
 ```{r eval=FALSE}
-# Export to REFI-QDA format (compatible with many QDA tools)
-export_to_refi_qda <- function(project, output_file) {
-  # This would need to be implemented based on REFI-QDA specifications
-  # See: https://www.qdasoftware.org/
-  
-  # Basic structure
-  xml_content <- paste0(
-    '<?xml version="1.0" encoding="UTF-8"?>\n',
-    '<qdpx:project xmlns:qdpx="www.qdasoftware.org">\n',
-    '  <qdpx:sources>\n',
-    '    <qdpx:textSource>\n',
-    '      <qdpx:plainTextContent>', 
-    project$text,
-    '      </qdpx:plainTextContent>\n',
-    '    </qdpx:textSource>\n',
-    '  </qdpx:sources>\n',
-    '  <qdpx:codes>\n'
-  )
-  
-  # Add codes
-  for (code in project$codes) {
-    xml_content <- paste0(
-      xml_content,
-      '    <qdpx:code name="', code, '" />\n'
-    )
-  }
-  
-  # Complete XML structure
-  xml_content <- paste0(
-    xml_content,
-    '  </qdpx:codes>\n',
-    '</qdpx:project>'
-  )
-  
-  # Write to file
-  writeLines(xml_content, output_file)
-  
+# Basic export to CSV
+export_to_csv <- function(project, output_file) {
+  write.csv(project$annotations, output_file, row.names = FALSE)
   return(output_file)
 }
+
+# Example of exporting annotations
+# export_to_csv(project, "project_annotations.csv")
 ```
 
 # Integration with Reporting Tools
@@ -341,10 +284,10 @@ export_to_refi_qda <- function(project, output_file) {
 
 Generate comprehensive reports from your textAnnotatoR analyses:
 
-```{r message=FALSE, warning=FALSE}
+```{r eval=FALSE}
 library(rmarkdown)
 
-# Function to generate a report
+# Function to generate a simple report
 generate_analysis_report <- function(project, output_file = "analysis_report.html") {
   # Create a temporary Rmd file
   temp_rmd <- tempfile(fileext = ".Rmd")
@@ -358,8 +301,6 @@ generate_analysis_report <- function(project, output_file = "analysis_report.htm
       "",
       "```{r setup, include=FALSE}",
       "knitr::opts_chunk$set(echo = FALSE)",
-      "library(ggplot2)",
-      "library(DT)",
       "```",
       "",
       "# Analysis Overview",
@@ -376,26 +317,10 @@ generate_analysis_report <- function(project, output_file = "analysis_report.htm
       "knitr::kable(stats)",
       "```",
       "",
-      "## Code Frequency",
-      "",
-      "```{r fig.height=6, fig.width=8}",
-      "code_counts <- table(project$annotations$code)",
-      "code_df <- data.frame(",
-      "  Code = names(code_counts),",
-      "  Frequency = as.numeric(code_counts)",
-      ")",
-      "ggplot(code_df, aes(reorder(Code, Frequency), Frequency, fill = Code)) +",
-      "  geom_col() +",
-      "  coord_flip() +",
-      "  theme_minimal() +",
-      "  labs(title = 'Code Frequencies', x = 'Code', y = 'Frequency') +",
-      "  theme(legend.position = 'none')",
-      "```",
-      "",
       "## Annotations Table",
       "",
       "```{r}",
-      "DT::datatable(project$annotations)",
+      "knitr::kable(project$annotations)",
       "```"
     ),
     temp_rmd
@@ -408,96 +333,6 @@ generate_analysis_report <- function(project, output_file = "analysis_report.htm
 }
 ```
 
-## Integration with Shiny
-
-Create interactive dashboards from your textAnnotatoR projects:
-
-```{r message=FALSE, warning=FALSE}
-library(shiny)
-
-# A simple Shiny app to explore annotations
-launch_annotation_explorer <- function(project) {
-  ui <- fluidPage(
-    titlePanel("textAnnotatoR Explorer"),
-    
-    sidebarLayout(
-      sidebarPanel(
-        selectInput("code", "Select Code:",
-                    choices = c("All", project$codes)),
-        hr(),
-        checkboxGroupInput("display_cols", "Display Columns:",
-                           choices = colnames(project$annotations),
-                           selected = c("text", "code", "memo"))
-      ),
-      
-      mainPanel(
-        tabsetPanel(
-          tabPanel("Annotations", DTOutput("annotations_table")),
-          tabPanel("Code Frequencies", plotOutput("code_freq_plot")),
-          tabPanel("Text", verbatimTextOutput("text_display"))
-        )
-      )
-    )
-  )
-  
-  server <- function(input, output) {
-    # Filter annotations based on selected code
-    filtered_annotations <- reactive({
-      if (input$code == "All") {
-        project$annotations
-      } else {
-        project$annotations[project$annotations$code == input$code, ]
-      }
-    })
-    
-    # Display annotations table
-    output$annotations_table <- renderDT({
-      filtered_annotations()[, input$display_cols, drop = FALSE]
-    })
-    
-    # Display code frequency plot
-    output$code_freq_plot <- renderPlot({
-      code_counts <- table(project$annotations$code)
-      code_df <- data.frame(
-        Code = names(code_counts),
-        Frequency = as.numeric(code_counts)
-      )
-      
-      ggplot(code_df, aes(reorder(Code, Frequency), Frequency, fill = Code)) +
-        geom_col() +
-        coord_flip() +
-        theme_minimal() +
-        labs(title = "Code Frequencies", x = "Code", y = "Frequency") +
-        theme(legend.position = "none")
-    })
-    
-    # Display text with highlighted segments
-    output$text_display <- renderText({
-      if (input$code == "All") {
-        project$text
-      } else {
-        # Get annotations for the selected code
-        code_annotations <- project$annotations[project$annotations$code == input$code, ]
-        
-        # Sort by position
-        code_annotations <- code_annotations[order(code_annotations$start), ]
-        
-        # Extract and display text segments
-        segments <- sapply(1:nrow(code_annotations), function(i) {
-          start <- code_annotations$start[i]
-          end <- code_annotations$end[i]
-          paste0("* ", substr(project$text, start, end))
-        })
-        
-        paste(segments, collapse = "\n\n")
-      }
-    })
-  }
-  
-  shinyApp(ui, server)
-}
-```
-
 # Performance Tips
 
 ## Working with Large Documents
@@ -505,7 +340,7 @@ launch_annotation_explorer <- function(project) {
 For very large documents, consider these optimization strategies:
 
 ```{r eval=FALSE}
-# 1. Split large documents
+# Split large documents into manageable chunks
 split_large_document <- function(file_path, chunk_size = 5000) {
   text <- readLines(file_path, warn = FALSE)
   text <- paste(text, collapse = "\n")
@@ -529,7 +364,7 @@ split_large_document <- function(file_path, chunk_size = 5000) {
   return(chunk_files)
 }
 
-# 2. Optimize annotations
+# Optimize annotations for performance
 optimize_annotations <- function(project) {
   # Remove duplicate annotations
   project$annotations <- unique(project$annotations)
@@ -546,39 +381,35 @@ optimize_annotations <- function(project) {
 When working with multiple files or team members:
 
 ```{r eval=FALSE}
-# Function to merge projects from multiple team members
-merge_team_projects <- function(project_files, output_file = "merged_project.rds") {
-  # Load all projects
-  projects <- lapply(project_files, load_project_state)
+# Function to merge annotations from multiple coders
+merge_annotations <- function(annotation_files, output_file = "merged_annotations.csv") {
+  # Read all annotation files
+  all_annotations <- lapply(annotation_files, read.csv, stringsAsFactors = FALSE)
   
-  # Ensure all projects refer to the same text
-  text <- projects[[1]]$text
-  if (!all(sapply(projects, function(p) identical(p$text, text)))) {
-    stop("All projects must reference the same text document")
+  # Add coder column to each set
+  for (i in seq_along(all_annotations)) {
+    all_annotations[[i]]$coder <- paste0("Coder", i)
   }
   
-  # Collect all annotations
-  all_annotations <- do.call(rbind, lapply(projects, function(p) {
-    # Add a coder column to track source
-    p$annotations$coder <- deparse(substitute(p))
-    p$annotations
-  }))
+  # Combine all annotations
+  merged <- do.call(rbind, all_annotations)
   
-  # Create merged project
-  merged_project <- projects[[1]]
-  merged_project$annotations <- all_annotations
+  # Write to CSV
+  write.csv(merged, output_file, row.names = FALSE)
   
-  # Save merged project
-  save_project_state(merged_project, output_file)
-  
-  return(merged_project)
+  return(output_file)
 }
+
+# Example usage:
+# merge_annotations(c("coder1_annotations.csv", "coder2_annotations.csv"))
 ```
 
 # Conclusion
 
 This vignette demonstrates how to leverage textAnnotatoR's data structures to integrate with the broader R ecosystem. By combining the intuitive annotation interface with powerful R packages for analysis and visualization, you have more control over your qualitative analysis workflow.
 
+The examples provided here use simple data to demonstrate the concepts while keeping the package size reasonable. In practice, you would use your actual project data and might need to modify these functions to match your specific requirements.
+
 ---
 
-*Note: Some functions in this vignette are examples that may need modification based on your specific needs and the current version of textAnnotatoR.*
+*Note: Some code examples use `eval=FALSE` to prevent large outputs during package building while still showing the code for demonstration purposes.*

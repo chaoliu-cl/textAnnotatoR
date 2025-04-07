@@ -43,30 +43,6 @@ handle_error <- function(expr, success_msg = NULL, error_msg = NULL, finally_msg
   })
 }
 
-#' Get project directory path
-#'
-#' @description
-#' Retrieves or creates the project directory path where all project files will be stored.
-#' Creates the directory if it doesn't exist.
-#'
-#' @return Character string containing the project directory path, or NULL if creation fails
-#' @importFrom shiny showNotification
-#' @keywords internal
-get_project_dir <- function() {
-  project_dir <- handle_error(
-    expr = {
-      data_dir <- init_data_dir()
-      project_dir <- file.path(data_dir, "projects")
-      if (!dir.exists(project_dir)) {
-        dir.create(project_dir, recursive = TRUE)
-      }
-      project_dir
-    },
-    error_msg = "Failed to create or access project directory"
-  )
-  return(project_dir)
-}
-
 #' Save project state to file
 #'
 #' @description
