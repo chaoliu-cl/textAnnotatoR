@@ -35,7 +35,8 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/textAnnotatoR_gui.html">Using the Text Annotation Interface</a></li>
+<li><a class="dropdown-item" href="articles/practical_example.html">Practical Example - Qualitative Analysis with textAnnotatoR</a></li>
+    <li><a class="dropdown-item" href="articles/technical_integration.html">Technical Integration - Using textAnnotatoR with Other R Tools</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -59,130 +60,159 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>textAnnotatoR is a comprehensive text annotation tool built with Shiny, designed to facilitate qualitative data analysis through an intuitive graphical user interface. It provides researchers, analysts, and qualitative data scientists with a robust environment for coding text documents, managing code hierarchies, creating memos, and analyzing coding patterns. The package supports collaborative research through standardized annotation formats and provides powerful tools for comparing two coding sets, analyzing code co-occurrences, and visualizing coding patterns.</p>
+<p><code>textAnnotatoR</code> provides an interactive graphical user interface for qualitative text analysis in R. The package allows researchers, students, and practitioners to annotate text, manage codes, create memos, and visualize coding patterns through an intuitive Shiny interface.</p>
 </div>
 <div class="section level2">
 <h2 id="key-features">Key Features<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h2>
 <ul>
-<li>Interactive text selection and annotation</li>
-<li>Hierarchical code organization with themes</li>
-<li>Real-time memo creation and linking</li>
-<li>Code co-occurrence analysis and visualization</li>
-<li>Multi-coder comparison tools</li>
-<li>Project management capabilities</li>
-<li>Export options for annotated text and analysis results</li>
+<li>
+<strong>Interactive Text Annotation</strong>: Select and code text segments directly within the GUI</li>
+<li>
+<strong>Code Management</strong>: Create, organize, and merge codes with a hierarchical structure</li>
+<li>
+<strong>Theme Organization</strong>: Group related codes into themes with a tree-based hierarchy</li>
+<li>
+<strong>Memo Creation</strong>: Attach notes and observations to annotations</li>
+<li>
+<strong>Advanced Visualization</strong>: Analyze code frequencies, co-occurrences, and patterns</li>
+<li>
+<strong>Comparison Tools</strong>: Compare coding patterns between different coders or documents</li>
+<li>
+<strong>Project Management</strong>: Save, load, and manage annotation projects</li>
+<li>
+<strong>Export Options</strong>: Save annotations and coded text in various formats (CSV, JSON, HTML)</li>
+<li>
+<strong>R Integration</strong>: Seamlessly combine with other R packages for advanced analysis</li>
 </ul>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of textAnnotatoR from GitHub using:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># Install textAnnotatoR</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="sc">-</span> From CRAN<span class="sc">:</span> </span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">'textAnnotatoR'</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="sc">-</span> From Github<span class="sc">:</span></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>remotes<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">"chaoliu-cl/textAnnotatoR"</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Install from CRAN</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"textAnnotatoR"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or install the development version from GitHub</span></span>
+<span><span class="co"># install.packages("devtools")</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"chaoliu-cl/textAnnotatoR"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="quick-start-example">Quick Start Example<a class="anchor" aria-label="anchor" href="#quick-start-example"></a>
+<h2 id="getting-started">Getting Started<a class="anchor" aria-label="anchor" href="#getting-started"></a>
 </h2>
-<p>Here’s a basic example of how to launch the annotation interface and start coding your text:</p>
+<p>Launch the annotation interface with a simple function call:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/chaoliu-cl/textAnnotatoR" class="external-link">textAnnotatoR</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Launch the annotation interface</span></span>
 <span><span class="fu"><a href="reference/annotate_gui.html">annotate_gui</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>This will open the Shiny application in your default web browser. From there, you can:</p>
-<ol style="list-style-type: decimal">
-<li>Import your text document (supports .txt, .docx, and .pdf)</li>
-<li>Select text using the cursor tool</li>
-<li>Apply codes and create memos</li>
-<li>Organize codes into themes</li>
-<li>Analyze coding patterns and co-occurrences</li>
-</ol>
+<p>This opens the Shiny application in your default web browser. The interface includes a toolbar for project management, a tabbed main area for different functions, and a text display area.</p>
 </div>
 <div class="section level2">
-<h2 id="package-components">Package Components<a class="anchor" aria-label="anchor" href="#package-components"></a>
+<h2 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
 </h2>
-<p>The package is structured around several main components:</p>
-<div class="section level3">
-<h3 id="core-interface">Core Interface<a class="anchor" aria-label="anchor" href="#core-interface"></a>
-</h3>
-<ul>
+<ol style="list-style-type: decimal">
 <li>
-<code><a href="reference/annotate_gui.html">annotate_gui()</a></code>: The main function that launches the interactive interface</li>
-<li>Project management tools for saving and loading annotation projects</li>
-<li>Text import and display functionality</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="code-management">Code Management<a class="anchor" aria-label="anchor" href="#code-management"></a>
-</h3>
-<ul>
-<li>Hierarchical code organization with themes</li>
-<li>Code merging and renaming capabilities</li>
-<li>Color-coded visualization of annotations</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="analysis-tools">Analysis Tools<a class="anchor" aria-label="anchor" href="#analysis-tools"></a>
-</h3>
-<ul>
-<li>Code frequency analysis</li>
-<li>Co-occurrence analysis with network and heatmap visualizations</li>
-<li>Pattern recognition for code sequences</li>
-<li>Multi-coder comparison tools</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="export-capabilities">Export Capabilities<a class="anchor" aria-label="anchor" href="#export-capabilities"></a>
-</h3>
-<ul>
-<li>Export annotations in CSV or JSON format</li>
-<li>Save annotated text with highlighting</li>
-<li>Generate analysis reports and visualizations</li>
-</ul>
-</div>
+<strong>Create a New Project</strong>: Click “New Project” in the top toolbar</li>
+<li>
+<strong>Import Text</strong>: Go to the “File” tab, upload your text document (.txt, .docx, .pdf)</li>
+<li>
+<strong>Annotate Text</strong>: Select text segments and apply codes</li>
+<li>
+<strong>Organize Codes</strong>: Create a hierarchical structure of themes and codes</li>
+<li>
+<strong>Analyze Patterns</strong>: Use the analysis tools to explore your coding</li>
+<li>
+<strong>Export Results</strong>: Save your annotations and analysis for further use</li>
+</ol>
 </div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>
-<p>For more detailed information, please refer to the package vignettes:</p>
+<p>Comprehensive documentation is available through vignettes:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># View available vignettes</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/browseVignettes.html" class="external-link">browseVignettes</a></span><span class="op">(</span><span class="st">"textAnnotatoR"</span><span class="op">)</span></span></code></pre></div>
-<p>Key vignettes include: - Getting Started with textAnnotatoR - Managing Code Hierarchies - Analyzing Coding Patterns - Comparing Multiple Coders</p>
+<code class="sourceCode R"><span><span class="co"># List available vignettes</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span>package <span class="op">=</span> <span class="st">"textAnnotatoR"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Read specific vignettes</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"practical_example"</span>, package <span class="op">=</span> <span class="st">"textAnnotatoR"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"technical_integration"</span>, package <span class="op">=</span> <span class="st">"textAnnotatoR"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="ecosystem-integration">Ecosystem Integration<a class="anchor" aria-label="anchor" href="#ecosystem-integration"></a>
+<h2 id="advanced-features">Advanced Features<a class="anchor" aria-label="anchor" href="#advanced-features"></a>
 </h2>
-<p>textAnnotatoR is designed to work seamlessly with the broader R ecosystem for qualitative data analysis:</p>
+<div class="section level3">
+<h3 id="code-hierarchies">Code Hierarchies<a class="anchor" aria-label="anchor" href="#code-hierarchies"></a>
+</h3>
+<p>Create and manage hierarchical code structures with themes and subthemes:</p>
 <ul>
-<li>Imports text from common document formats using <code>readtext</code>
-</li>
-<li>Utilizes <code>data.tree</code> for efficient hierarchy management</li>
-<li>Leverages <code>shiny</code> and <code>shinydashboard</code> for the interactive interface</li>
-<li>Integrates with <code>DT</code> for data display and manipulation</li>
+<li>Use “Add Theme” to create organizational categories</li>
+<li>Group related codes under appropriate themes</li>
+<li>Visualize the hierarchy in a tree structure</li>
 </ul>
-<p>The package fills a gap in the R qualitative analysis ecosystem by providing a user-friendly GUI while maintaining programmatic access to all functionality.</p>
+</div>
+<div class="section level3">
+<h3 id="co-occurrence-analysis">Co-occurrence Analysis<a class="anchor" aria-label="anchor" href="#co-occurrence-analysis"></a>
+</h3>
+<p>Explore relationships between different codes:</p>
+<ul>
+<li>Identify patterns of code co-occurrence</li>
+<li>Visualize connections through network graphs</li>
+<li>Examine statistical measures of code relationships</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="comparison-tools">Comparison Tools<a class="anchor" aria-label="anchor" href="#comparison-tools"></a>
+</h3>
+<p>Compare coding patterns between different coders or documents:</p>
+<ul>
+<li>Upload two annotation sets</li>
+<li>Analyze similarities and differences</li>
+<li>Visualize comparative patterns</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="data-export">Data Export<a class="anchor" aria-label="anchor" href="#data-export"></a>
+</h3>
+<p>Export your annotations in various formats:</p>
+<ul>
+<li>CSV for quantitative analysis</li>
+<li>JSON for web applications</li>
+<li>HTML for formatted viewing with code highlighting</li>
+</ul>
+</div>
+</div>
+<div class="section level2">
+<h2 id="integration-with-r-ecosystem">Integration with R Ecosystem<a class="anchor" aria-label="anchor" href="#integration-with-r-ecosystem"></a>
+</h2>
+<p><code>textAnnotatoR</code> is designed to work seamlessly with other R packages:</p>
+<ul>
+<li>
+<strong>tidytext</strong>: For text mining and natural language processing</li>
+<li>
+<strong>quanteda</strong>: For advanced text analysis</li>
+<li>
+<strong>igraph/ggraph</strong>: For network visualizations of code relationships</li>
+<li>
+<strong>rmarkdown/shiny</strong>: For reporting and interactive dashboards</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="system-requirements">System Requirements<a class="anchor" aria-label="anchor" href="#system-requirements"></a>
+</h2>
+<ul>
+<li>R version 4.0.0 or higher</li>
+<li>Shiny and its dependencies</li>
+<li>A modern web browser</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="contributing">Contributing<a class="anchor" aria-label="anchor" href="#contributing"></a>
 </h2>
-<p>Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.</p>
+<p>Contributions to <code>textAnnotatoR</code> are welcome! Please feel free to submit issues or pull requests on GitHub.</p>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
-<p>This project is licensed under the GPL-3 License - see the <a href="LICENSE">LICENSE</a> file for details.</p>
-</div>
-<div class="section level2">
-<h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
-</h2>
-<p>If you use textAnnotatoR in your research, please cite it as:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/citation.html" class="external-link">citation</a></span><span class="op">(</span><span class="st">"textAnnotatoR"</span><span class="op">)</span></span></code></pre></div>
+<p>This package is licensed under the GPL-3 License.</p>
 </div>
 <div class="section level2">
 <h2 id="contact">Contact<a class="anchor" aria-label="anchor" href="#contact"></a>
@@ -209,7 +239,9 @@
 <div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
-<li><a href="https://www.r-project.org/Licenses/GPL-3" class="external-link">GPL-3</a></li>
+<li>
+<a href="https://www.r-project.org/Licenses/GPL-3" class="external-link">GPL-3</a> + file <a href="LICENSE-text.html">LICENSE</a>
+</li>
 </ul>
 </div>
 
