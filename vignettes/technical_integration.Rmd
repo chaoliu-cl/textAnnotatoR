@@ -33,7 +33,9 @@ library(textAnnotatoR)
 
 # Introduction
 
-While textAnnotatoR provides a comprehensive GUI for annotation, its true power comes from integration with the broader R ecosystem. This vignette demonstrates how to integrate textAnnotatoR's outputs with other popular R packages for text analysis, visualization, and reporting.
+While textAnnotatoR provides a comprehensive GUI for annotation, it can be integrated seamlessly with the broader R ecosystem. This vignette demonstrates how you can integrate textAnnotatoR's outputs with other popular R packages for text analysis, visualization, and reporting.
+
+> **IMPORTANT NOTE:** The example functions shown in this vignette are not part of the textAnnotatoR package. They are provided as examples that users can adapt and implement in their own workflows to extend textAnnotatoR's capabilities. These sample functions demonstrate how to work with textAnnotatoR's data structures to integrate with other R tools.
 
 # Understanding Data Structures
 
@@ -44,8 +46,9 @@ Before integrating with other tools, let's explore the structure of textAnnotato
 textAnnotatoR project files (.rds) contain the following components:
 
 ```{r echo = TRUE, results = 'hide'}
-# First, ensure the project directory exists and is initialized
-# We need to handle this explicitly when working outside the GUI
+# EXAMPLE USER FUNCTION - NOT PART OF THE PACKAGE
+# This function demonstrates how a user might initialize a directory
+# for working with textAnnotatoR project files programmatically
 initialize_project_directory <- function() {
   # Get user documents directory as a safer default
   user_docs <- file.path(path.expand("~"), "Documents")
@@ -106,7 +109,7 @@ This structure makes it readily compatible with standard R data manipulation too
 
 ## Using textAnnotatoR with quanteda
 
-The [quanteda](https://quanteda.io/) package is a powerful framework for text analysis. Here's how to combine textAnnotatoR annotations with quanteda:
+The [quanteda](https://quanteda.io/) package is a powerful framework for text analysis. Here's how you can combine textAnnotatoR annotations with quanteda:
 
 ```{r eval=TRUE}
 library(quanteda)
@@ -134,7 +137,7 @@ The [tidytext](https://www.tidytextmining.com/) package works beautifully with t
 library(tidytext)
 library(ggplot2)
 
-# Convert annotations to tidy format
+# Example of how you can convert annotations to tidy format
 tidy_annotations <- project$annotations %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words)
@@ -159,12 +162,13 @@ ggplot(word_frequencies, aes(reorder(word, n), n, fill = code)) +
 
 ## Network Visualization with igraph
 
-The following example demonstrates how to create network visualizations from co-occurrence patterns:
+The following example demonstrates how you can create network visualizations from co-occurrence patterns:
 
 ```{r, eval=FALSE}
 library(igraph)
 library(ggplot2)
 
+# EXAMPLE USER CODE - NOT PART OF THE PACKAGE
 # Create a simple matrix of code co-occurrences
 codes <- c("Home Setup", "Work-Life", "Tools", "Benefits")
 co_matrix <- matrix(c(
@@ -201,6 +205,7 @@ knitr::include_graphics("../man/figures/code_cooccurance.png")
 Create static visualizations of your code frequencies:
 
 ```{r, eval=FALSE}
+# EXAMPLE USER CODE - NOT PART OF THE PACKAGE
 # Create a base ggplot with code frequencies
 code_freq <- data.frame(
   code = codes,
@@ -223,10 +228,11 @@ knitr::include_graphics("../man/figures/example_code_freq.png")
 
 ## Processing Multiple Documents
 
-For projects with multiple documents, you can automate the workflow:
+For projects with multiple documents, you can create your own functions to automate the workflow:
 
 ```{r eval=FALSE}
-# Function to process a single document
+# EXAMPLE USER FUNCTION - NOT PART OF THE PACKAGE
+# This function demonstrates how you might process a single document
 process_document <- function(file_path, coding_scheme) {
   # Import text
   text <- readLines(file_path, warn = FALSE)
@@ -258,23 +264,24 @@ process_document <- function(file_path, coding_scheme) {
   return(project_name)
 }
 
-# Example of processing a folder of documents
+# Example of how you might process a folder of documents
 # files <- list.files("interview_transcripts", pattern = "*.txt", full.names = TRUE)
 # processed_projects <- sapply(files, process_document, coding_scheme = master_scheme)
 ```
 
 ## Export to Other Formats
 
-Convert textAnnotatoR annotations to formats compatible with other QDA software:
+You can write functions to convert textAnnotatoR annotations to formats compatible with other QDA software:
 
 ```{r eval=FALSE}
+# EXAMPLE USER FUNCTION - NOT PART OF THE PACKAGE
 # Basic export to CSV
 export_to_csv <- function(project, output_file) {
   write.csv(project$annotations, output_file, row.names = FALSE)
   return(output_file)
 }
 
-# Example of exporting annotations
+# Example of how you might export annotations
 # export_to_csv(project, "project_annotations.csv")
 ```
 
@@ -282,12 +289,13 @@ export_to_csv <- function(project, output_file) {
 
 ## Creating Reports with R Markdown
 
-Generate comprehensive reports from your textAnnotatoR analyses:
+You can generate comprehensive reports from your textAnnotatoR analyses:
 
 ```{r eval=FALSE}
 library(rmarkdown)
 
-# Function to generate a simple report
+# EXAMPLE USER FUNCTION - NOT PART OF THE PACKAGE
+# This function demonstrates how you might generate a simple report
 generate_analysis_report <- function(project, output_file = "analysis_report.html") {
   # Create a temporary Rmd file
   temp_rmd <- tempfile(fileext = ".Rmd")
@@ -337,9 +345,12 @@ generate_analysis_report <- function(project, output_file = "analysis_report.htm
 
 ## Working with Large Documents
 
-For very large documents, consider these optimization strategies:
+For very large documents, consider creating these optimization strategies:
 
 ```{r eval=FALSE}
+# EXAMPLE USER FUNCTIONS - NOT PART OF THE PACKAGE
+# These functions demonstrate techniques you could implement
+
 # Split large documents into manageable chunks
 split_large_document <- function(file_path, chunk_size = 5000) {
   text <- readLines(file_path, warn = FALSE)
@@ -378,10 +389,11 @@ optimize_annotations <- function(project) {
 
 ## Batch Processing Tips
 
-When working with multiple files or team members:
+When working with multiple files or team members, you could implement functions like this:
 
 ```{r eval=FALSE}
-# Function to merge annotations from multiple coders
+# EXAMPLE USER FUNCTION - NOT PART OF THE PACKAGE
+# This function demonstrates how you might merge annotations from multiple coders
 merge_annotations <- function(annotation_files, output_file = "merged_annotations.csv") {
   # Read all annotation files
   all_annotations <- lapply(annotation_files, read.csv, stringsAsFactors = FALSE)
@@ -400,15 +412,17 @@ merge_annotations <- function(annotation_files, output_file = "merged_annotation
   return(output_file)
 }
 
-# Example usage:
+# Example of how you might use this:
 # merge_annotations(c("coder1_annotations.csv", "coder2_annotations.csv"))
 ```
 
 # Conclusion
 
-This vignette demonstrates how to leverage textAnnotatoR's data structures to integrate with the broader R ecosystem. By combining the intuitive annotation interface with powerful R packages for analysis and visualization, you have more control over your qualitative analysis workflow.
+This vignette demonstrates how you can leverage textAnnotatoR's data structures to integrate with the broader R ecosystem. By combining the intuitive annotation interface with powerful R packages for analysis and visualization, you gain more control over your qualitative analysis workflow.
 
-The examples provided here use simple data to demonstrate the concepts while keeping the package size reasonable. In practice, you would use your actual project data and might need to modify these functions to match your specific requirements.
+Remember, all the example functions provided in this vignette are not part of the textAnnotatoR package but rather examples of how you can extend the package's functionality. You are encouraged to adapt and modify these functions to fit your specific requirements.
+
+The examples provided here use simple data to demonstrate the concepts while keeping the package size reasonable. In practice, you would use your actual project data exported from textAnnotatoR.
 
 ---
 
