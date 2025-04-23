@@ -60,7 +60,7 @@
       <h1>Practical Example - Qualitative Analysis with textAnnotatoR</h1>
                         <h4 data-toc-skip class="author">Chao Liu</h4>
             
-            <h4 data-toc-skip class="date">2025-04-07</h4>
+            <h4 data-toc-skip class="date">2025-04-23</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/chaoliu-cl/textAnnotatoR/blob/master/vignettes/practical_example.Rmd" class="external-link"><code>vignettes/practical_example.Rmd</code></a></small>
       <div class="d-none name"><code>practical_example.Rmd</code></div>
@@ -79,9 +79,69 @@ content. You’ll learn how to:</p>
 <li>Set up a project</li>
 <li>Import text data</li>
 <li>Annotate text</li>
+<li>Manage project files (saving, loading, and organizing)</li>
 <li>Analyze patterns within coded data</li>
 <li>Export results</li>
 </ol>
+</div>
+<div class="section level2">
+<h2 id="setting-up-textannotator">Setting Up textAnnotatoR<a class="anchor" aria-label="anchor" href="#setting-up-textannotator"></a>
+</h2>
+<p>Before diving into the sample project, let’s understand how to
+properly set up textAnnotatoR and navigate its interface.</p>
+<div class="section level3">
+<h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h3>
+<p>If you haven’t installed textAnnotatoR yet, you can install it from
+GitHub:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Install devtools if not already installed</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"devtools"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"devtools"</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># Install textAnnotatoR</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"chaoliu-cl/textAnnotatoR"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="first-time-setup">First-Time Setup<a class="anchor" aria-label="anchor" href="#first-time-setup"></a>
+</h3>
+<p>The first time you run textAnnotatoR, it will ask you to confirm
+where you want to store your project data:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/chaoliu-cl/textAnnotatoR" class="external-link">textAnnotatoR</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/annotate_gui.html">annotate_gui</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>You’ll see a dialog asking you to choose between: 1) Default
+Location: A folder managed by R in your user directory 2) Custom
+Location: A directory of your choice</p>
+<p><img src="../reference/figures/storage_location.png" width="600px" style="display: block; margin: auto;"></p>
+<p>If you choose “Custom Location,” you’ll need to navigate to and
+select your preferred directory. This directory will store all your
+textAnnotatoR projects.</p>
+</div>
+<div class="section level3">
+<h3 id="understanding-the-interface">Understanding the Interface<a class="anchor" aria-label="anchor" href="#understanding-the-interface"></a>
+</h3>
+<p>When textAnnotatoR launches, you’ll see several tabs:</p>
+<ul>
+<li>
+<strong>File</strong>: Import text and manage projects</li>
+<li>
+<strong>Code and Memo</strong>: For managing codes and adding
+memos</li>
+<li>
+<strong>Themes</strong>: Organize codes into themes and
+hierarchies</li>
+<li>
+<strong>Analysis</strong>: Analyze coding patterns</li>
+<li>
+<strong>Records</strong>: View all annotations in tabular
+format</li>
+<li>
+<strong>Comparison</strong>: Compare coding between different
+coders</li>
+</ul>
+</div>
 </div>
 <div class="section level2">
 <h2 id="sample-project-analyzing-interview-responses">Sample Project: Analyzing Interview Responses<a class="anchor" aria-label="anchor" href="#sample-project-analyzing-interview-responses"></a>
@@ -90,15 +150,16 @@ content. You’ll learn how to:</p>
 about remote work experiences. The example demonstrates how you might
 use textAnnotatoR in a real qualitative research context.</p>
 <div class="section level3">
-<h3 id="step-1-starting-a-new-project">Step 1: Starting a New Project<a class="anchor" aria-label="anchor" href="#step-1-starting-a-new-project"></a>
+<h3 id="step-1-creating-a-new-project">Step 1: Creating a New Project<a class="anchor" aria-label="anchor" href="#step-1-creating-a-new-project"></a>
 </h3>
-<p>First, let’s launch the textAnnotatoR interface and create a new
-project:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/chaoliu-cl/textAnnotatoR" class="external-link">textAnnotatoR</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/annotate_gui.html">annotate_gui</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>When the interface loads, click “New Project” in the top toolbar:</p>
+<p>When you first launch textAnnotatoR, it automatically creates a blank
+project. However, if you want to start a new project, click “New
+Project” in the top toolbar</p>
 <p><img src="../reference/figures/new_project_creation.png" width="700px" style="display: block; margin: auto;"></p>
+<p>If you have unsaved changes in your current project, you’ll see a
+confirmation dialog asking if you want to save your current project
+first:</p>
+<p><img src="../reference/figures/save_before_new.png" width="550px" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="step-2-importing-text-data">Step 2: Importing Text Data<a class="anchor" aria-label="anchor" href="#step-2-importing-text-data"></a>
@@ -117,16 +178,30 @@ Participant: Video conferencing has been essential - we use Zoom for all our mee
 Interviewer: How has remote work affected your work-life balance?
 
 Participant: It's a double-edged sword. I have more flexibility and time with family, but it's also harder to disconnect. Sometimes I find myself checking emails well into the evening, which wasn't a habit before. I've had to be intentional about setting working hours and sticking to them. Taking short walks during the day has become my substitute for the natural breaks that happened in the office.</code></pre>
-<p>Go to the “File” tab and: 1. Click “Choose File” to upload your
-<code>remote_work_interview.txt</code> 2. Click “Import Text”</p>
-<p><img src="../reference/figures/import_text.png" width="700px" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
-<h3 id="step-3-annotating-the-text">Step 3: Annotating the Text<a class="anchor" aria-label="anchor" href="#step-3-annotating-the-text"></a>
+<h3 id="step-3-saving-your-project">Step 3: Saving Your Project<a class="anchor" aria-label="anchor" href="#step-3-saving-your-project"></a>
+</h3>
+<p>It’s important to save your project regularly. To do that, click on
+“Save Project”</p>
+<p><img src="../reference/figures/save_project.png" width="650px" style="display: block; margin: auto;"></p>
+<p>Then, a dialog will appear:</p>
+<p><img src="../reference/figures/save_project_dialog.png" width="650px" style="display: block; margin: auto;"></p>
+<ul>
+<li>Type in your project name</li>
+<li>Click “Choose Directory” to select where to save the project</li>
+<li>Directories are displayed in a hierarchical format - navigate to
+your desired location</li>
+<li>Click “Save” to save your project</li>
+</ul>
+<p>The project will be saved as an RDS file, which preserves all your
+annotations, codes, and project structure.</p>
+</div>
+<div class="section level3">
+<h3 id="step-4-annotating-the-text">Step 4: Annotating the Text<a class="anchor" aria-label="anchor" href="#step-4-annotating-the-text"></a>
 </h3>
 <p>Now let’s start coding our interview text:</p>
 <ol style="list-style-type: decimal">
-<li>Return to the text display area</li>
 <li>Click the selection tool (cursor icon) in the right margin</li>
 <li>Select text discussing the home workspace setup</li>
 <li>In the “Code and Memo” tab, enter “Home Setup” as the code</li>
@@ -138,20 +213,88 @@ Participant: It's a double-edged sword. I have more flexibility and time with fa
 example:</p>
 <ul>
 <li>Code Zoom, Slack, and Asana as “Technology”</li>
-<li>Code save two hours daily by not commuting as “Save Time”</li>
+<li>Code “save two hours daily by not commuting” as “Save Time”</li>
 <li>Code discussions of missed impromptu conversations as “Social
 Isolation”</li>
 </ul>
 <p>Your annotated text will begin to look like this, with different
 colored highlights representing different codes:</p>
 <p><img src="../reference/figures/annotating_process.png" width="700px" style="display: block; margin: auto;"></p>
-<p>If you want to apply an existing code to the text, first highlight
-the text and click on “Apply Code”, then choose the code you want to
-apply:</p>
+<div class="section level4">
+<h4 id="applying-existing-codes">Applying Existing Codes<a class="anchor" aria-label="anchor" href="#applying-existing-codes"></a>
+</h4>
+<p>Once you’ve created some codes, you can apply them to new text
+segments:</p>
+<ol style="list-style-type: decimal">
+<li>Highlight the target text</li>
+<li>Click on “Apply Code” in the side panel</li>
+<li>Choose the code you want to apply from the dropdown menu</li>
+</ol>
 <p><img src="../reference/figures/apply_code.png" width="700px" style="display: block; margin: auto;"></p>
 </div>
+<div class="section level4">
+<h4 id="managing-codes">Managing Codes<a class="anchor" aria-label="anchor" href="#managing-codes"></a>
+</h4>
+<p>As your coding progresses, you’ll want to manage your codes
+efficiently. You can click on the highlighted text to:</p>
+<ul>
+<li>Replace code</li>
+<li>Rename code</li>
+<li>Delete code</li>
+</ul>
+<p><img src="../reference/figures/edit_code.png" width="650px" style="display: block; margin: auto;"></p>
+</div>
+<div class="section level4">
+<h4 id="merging-similar-codes">Merging Similar Codes<a class="anchor" aria-label="anchor" href="#merging-similar-codes"></a>
+</h4>
+<p>In some instances, you might find that some of your codes are
+conceptually similar or overlapping. textAnnotatoR provides a “Merge
+Codes” feature to consolidate these:</p>
+<ol style="list-style-type: decimal">
+<li>Go to the “Code and Memo” tab</li>
+<li>In the “Codes” section, select two or more codes by checking the
+boxes next to them</li>
+<li>Click the “Merge Codes” button</li>
+<li>A dialog will appear asking you to name the new merged code:
+<ul>
+<li>Enter a descriptive name that encompasses the concepts being
+merged</li>
+<li>Click “Merge” to confirm</li>
+</ul>
+</li>
+</ol>
+<p><img src="../reference/figures/merge_codes_dialog.png" width="650px" style="display: block; margin: auto;"></p>
+<p>This feature is particularly useful when:</p>
+<ul>
+<li>Your initial coding was very granular and you now want broader
+categories</li>
+<li>Multiple codes have emerged that represent the same underlying
+concept</li>
+<li>You want to simplify your coding scheme for analysis or
+reporting</li>
+</ul>
+</div>
+</div>
 <div class="section level3">
-<h3 id="step-4-analyzing-the-coded-data">Step 4: Analyzing the Coded Data<a class="anchor" aria-label="anchor" href="#step-4-analyzing-the-coded-data"></a>
+<h3 id="step-5-loading-your-project">Step 5: Loading Your Project<a class="anchor" aria-label="anchor" href="#step-5-loading-your-project"></a>
+</h3>
+<p>If you need to continue your work later, you’ll need to load your
+saved project: Click “Load Project”.</p>
+<p><img src="../reference/figures/load_project.png" width="650px" style="display: block; margin: auto;"></p>
+<p>Then a dialog will appear:
+<img src="../reference/figures/load_project_dialog.png" width="650px" style="display: block; margin: auto;"></p>
+<ul>
+<li>Click “Choose Project File” to navigate to your saved project
+file</li>
+<li>Navigate through the directory structure to find your project</li>
+<li>Select the RDS file and click “Select”</li>
+<li>Click “Load” to load your project</li>
+</ul>
+<p>All your text, annotations, codes, and memos will be restored exactly
+as you left them.</p>
+</div>
+<div class="section level3">
+<h3 id="step-6-analyzing-the-coded-data">Step 6: Analyzing the Coded Data<a class="anchor" aria-label="anchor" href="#step-6-analyzing-the-coded-data"></a>
 </h3>
 <p>Once you’ve coded the entire interview, use the analysis tools to
 examine patterns:</p>
@@ -173,11 +316,24 @@ codes:</p>
 <p><img src="../reference/figures/co_occurrence.png" width="700px" style="display: block; margin: auto;"></p>
 <p>This visualization might reveal that “Boundary difficulty” and
 “Family friendly” frequently co-occur, suggesting a relationship between
-these issues</p>
+these issues.</p>
+</div>
+<div class="section level4">
+<h4 id="text-statistics">Text Statistics<a class="anchor" aria-label="anchor" href="#text-statistics"></a>
+</h4>
+<p>The “Analysis” tab also provides basic text statistics:</p>
+<ol style="list-style-type: decimal">
+<li>Word count</li>
+<li>Character count</li>
+<li>Sentence count</li>
+<li>Percentage of text that has been coded</li>
+</ol>
+<p>These statistics can help you track your coding progress and provide
+context for your analysis.</p>
 </div>
 </div>
 <div class="section level3">
-<h3 id="optional-step-creating-themes">Optional Step: Creating Themes<a class="anchor" aria-label="anchor" href="#optional-step-creating-themes"></a>
+<h3 id="step-7-creating-themes">Step 7: Creating Themes<a class="anchor" aria-label="anchor" href="#step-7-creating-themes"></a>
 </h3>
 <p>Sometimes multiple codes may share the same underlying theme and you
 may want to create a theme that encompasses several codes. Let’s create
@@ -206,10 +362,9 @@ Setup”</li>
 <p>When finished, your code hierarchy should look something like
 this:</p>
 <p><img src="../reference/figures/code_and_theme_hierarchy.png" width="700px" style="display: block; margin: auto;"></p>
-<p>Continue for other themes with appropriate codes.</p>
 </div>
 <div class="section level3">
-<h3 id="step-5-exporting-results">Step 5: Exporting Results<a class="anchor" aria-label="anchor" href="#step-5-exporting-results"></a>
+<h3 id="step-8-exporting-results">Step 8: Exporting Results<a class="anchor" aria-label="anchor" href="#step-8-exporting-results"></a>
 </h3>
 <div class="section level4">
 <h4 id="saving-annotations">Saving Annotations<a class="anchor" aria-label="anchor" href="#saving-annotations"></a>
@@ -235,7 +390,7 @@ this:</p>
 </div>
 </div>
 <div class="section level3">
-<h3 id="step-6-project-comparison-two-coders">Step 6: Project Comparison (Two Coders)<a class="anchor" aria-label="anchor" href="#step-6-project-comparison-two-coders"></a>
+<h3 id="step-9-project-comparison-two-coders">Step 9: Project Comparison (Two Coders)<a class="anchor" aria-label="anchor" href="#step-9-project-comparison-two-coders"></a>
 </h3>
 <p>If you’re working with a team where two researchers code the same
 text, you can use the comparison tools:</p>
@@ -246,7 +401,7 @@ text, you can use the comparison tools:</p>
 <li>Upload both CSV files</li>
 <li>Run the comparison to see inter-coder agreement and differences</li>
 </ol>
-<p><img src="../reference/figures//comparison_analysis.png" width="400px" style="display: block; margin: auto;"></p>
+<p><img src="../reference/figures/comparison_analysis.png" width="400px" style="display: block; margin: auto;"></p>
 <p><img src="../reference/figures/comparison_analysis2.png" width="400px" style="display: block; margin: auto;"></p>
 </div>
 </div>
@@ -255,7 +410,7 @@ text, you can use the comparison tools:</p>
 </h2>
 <p>To practice with this exact example, you can download a starter
 project from the textAnnotatoR GitHub repository:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># If you have the remotes package installed</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"chaoliu-cl/textAnnotatoR"</span>, build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
