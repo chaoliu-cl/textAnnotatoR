@@ -151,9 +151,7 @@ Now let's start coding our interview text:
 5. Add a memo: "Initial challenge in transition to remote work"
 6. Click "Save" to save the code
 
-```{r, out.width = "700px", echo=FALSE}
-knitr::include_graphics("../man/figures/annotate1.png")
-```
+<img src="C:/Users/chaoliu/OneDrive - Cedarville University/Documents/textAnnotatoR/man/figures/Save_code_gif.gif" width="700" />
 
 Continue this process for other notable segments in the text. For example:
 
@@ -175,9 +173,7 @@ Once you've created some codes, you can apply them to new text segments:
 2. Click on "Apply Code" in the side panel 
 3. Choose the code you want to apply from the dropdown menu
 
-```{r, out.width = "700px", echo=FALSE}
-knitr::include_graphics("../man/figures/apply_code.png")
-```
+<img src="C:/Users/chaoliu/OneDrive - Cedarville University/Documents/textAnnotatoR/man/figures/Apply_code_gif.gif" width="700" />
 
 ### Managing Codes
 
