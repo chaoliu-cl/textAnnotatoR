@@ -54,7 +54,7 @@
 #' @importFrom shiny runApp shinyApp fluidPage actionButton observeEvent renderUI
 #'   showNotification showModal modalDialog removeModal updateTextAreaInput
 #'   updateTextInput tabPanel fileInput renderTable renderPlot plotOutput
-#'   tableOutput textInput textAreaInput selectInput checkboxGroupInput
+#'   tableOutput textInput textOutput checkboxInput textAreaInput selectInput checkboxGroupInput
 #' @importFrom shinyjs useShinyjs toggle runjs
 #' @importFrom data.tree Node
 #' @importFrom jsonlite fromJSON toJSON write_json
@@ -306,6 +306,17 @@ annotate_gui <- function() {
             width = NULL,
             id = "tabset",
             tabPanel("File", icon = icon("file"),
+                     # Add current file display
+                     conditionalPanel(
+                       condition = "output.current_file_name",
+                       div(style = "margin-bottom: 15px; padding: 10px; background-color: #e8f4e8; border-radius: 5px;",
+                           tags$p(
+                             icon("file", class = "text-success"),
+                             strong("Current file: "),
+                             textOutput("current_file_name", inline = TRUE)
+                           )
+                       )
+                     ),
                      fileInput("file_input", "Choose File",
                                accept = c(".txt", ".docx", ".pdf")),
                      actionButton("import_text", "Import Text")
@@ -354,10 +365,38 @@ annotate_gui <- function() {
             #         actionButton("generate_codebook", "Generate Code Book", icon = icon("book"))
             #),
             tabPanel("Analysis", icon = icon("chart-bar"),
-                     actionButton("code_frequency", "Code Frequency", icon = icon("chart-bar")),
-                     actionButton("code_co_occurrence", "Code Co-occurrence", icon = icon("project-diagram")),
-                     actionButton("word_cloud", "Word Cloud", icon = icon("cloud")),
-                     actionButton("text_summary", "Text Summary", icon = icon("file-alt"))
+                     fluidRow(
+                       column(6,
+                              wellPanel(
+                                h4("Analysis Settings"),
+                                selectInput("cooccurrence_unit",
+                                            "Co-occurrence Analysis Unit:",
+                                            choices = c("Paragraph" = "paragraph",
+                                                        "Sentence" = "sentence",
+                                                        "Document" = "document"),
+                                            selected = "paragraph"),
+                                helpText("Select the analytical unit for co-occurrence analysis:",
+                                         tags$br(),
+                                         tags$strong("Sentence:"), " Codes appearing in the same sentence",
+                                         tags$br(),
+                                         tags$strong("Paragraph:"), " Codes appearing in the same paragraph",
+                                         tags$br(),
+                                         tags$strong("Document:"), " Codes appearing anywhere in the document")
+                              )
+                       ),
+                       column(6,
+                              wellPanel(
+                                h4("Analysis Tools"),
+                                actionButton("code_frequency", "Code Frequency", icon = icon("chart-bar")),
+                                br(), br(),
+                                actionButton("code_co_occurrence", "Code Co-occurrence", icon = icon("project-diagram")),
+                                br(), br(),
+                                actionButton("word_cloud", "Word Cloud", icon = icon("cloud")),
+                                br(), br(),
+                                actionButton("text_summary", "Text Summary", icon = icon("file-alt"))
+                              )
+                       )
+                     )
             ),
             #tabPanel("Import/Export", icon = icon("exchange-alt"),
             #         actionButton("import_annotations", "Import Annotations", icon = icon("file-import")),
@@ -451,6 +490,7 @@ annotate_gui <- function() {
         text = character(),
         code = character(),
         memo = character(),
+        source_file = character(),  # NEW: Track source file
         stringsAsFactors = FALSE
       ),
       codes = character(),
@@ -463,6 +503,7 @@ annotate_gui <- function() {
       # Add new state tracking
       project_modified = FALSE,
       current_project = NULL,
+      current_file_name = NULL,  # NEW: Track current file name
       action_history = list(),
       action_index = 0,
       merged_codes = list(),
@@ -472,6 +513,27 @@ annotate_gui <- function() {
       comparison_data = NULL,
       comparison_results = NULL
     )
+
+    # Sync codes with hierarchy when annotations change
+    observe({
+      rv$annotations  # Create dependency on annotations
+
+      # Extract unique codes from annotations
+      if (!is.null(rv$annotations) && nrow(rv$annotations) > 0) {
+        annotation_codes <- unique(rv$annotations$code)
+        rv$codes <- unique(c(rv$codes, annotation_codes))
+      }
+
+      # Sync codes with hierarchy
+      rv <- sync_codes_with_hierarchy(rv)
+    })
+
+    # Update any existing dark colors to readable ones when app starts
+    observe({
+      if (length(rv$code_colors) > 0) {
+        rv <- update_dark_colors(rv)
+      }
+    }, priority = 999)  # High priority to run early
 
     # Initialize directory with confirmation
     observe({
@@ -1195,43 +1257,152 @@ annotate_gui <- function() {
 
     #update_text_display function
     update_text_display <- function() {
-      if (nrow(rv$annotations) == 0) {
-        return(paste0("<span class='char' id='char_", 1:nchar(rv$text), "'>", strsplit(rv$text, "")[[1]], "</span>", collapse = ""))
+      # Check if rv exists and has the required components
+      if (!exists("rv") || is.null(rv$text) || rv$text == "") {
+        return("")
       }
 
+      # If there are no annotations, simply display the text with line breaks
+      if (is.null(rv$annotations) || nrow(rv$annotations) == 0) {
+        # Split the text into lines first to preserve line breaks
+        lines <- strsplit(rv$text, "\n", fixed = TRUE)[[1]]
+        html_text <- ""
+
+        char_counter <- 1
+        for (i in seq_along(lines)) {
+          line <- lines[i]
+          # For each character in the line
+          if (nchar(line) > 0) {
+            for (j in 1:nchar(line)) {
+              char <- substr(line, j, j)
+              html_text <- paste0(html_text,
+                                  '<span class="char" id="char_', char_counter, '">',
+                                  htmlEscape(char), '</span>')
+              char_counter <- char_counter + 1
+            }
+          }
+
+          # Add a line break after each line (except the last line)
+          if (i < length(lines)) {
+            html_text <- paste0(html_text,
+                                '<span class="char" id="char_', char_counter, '">\n</span><br>')
+            char_counter <- char_counter + 1
+          }
+        }
+
+        return(html_text)
+      }
+
+      # If there are annotations, handle them while preserving line breaks
       sorted_annotations <- rv$annotations[order(rv$annotations$start), ]
       displayed_text <- ""
       last_end <- 0
 
       for (i in 1:nrow(sorted_annotations)) {
+        # Validate annotation positions
+        if (sorted_annotations$start[i] > nchar(rv$text) ||
+            sorted_annotations$end[i] > nchar(rv$text) ||
+            sorted_annotations$start[i] < 1 ||
+            sorted_annotations$end[i] < sorted_annotations$start[i]) {
+          next  # Skip invalid annotations
+        }
+
         if (sorted_annotations$start[i] > last_end + 1) {
-          displayed_text <- paste0(displayed_text,
-                                   paste0("<span class='char' id='char_", (last_end + 1):(sorted_annotations$start[i] - 1), "'>",
-                                          strsplit(substr(rv$text, last_end + 1, sorted_annotations$start[i] - 1), "")[[1]],
-                                          "</span>", collapse = ""))
+          # Text before annotation
+          segment <- substr(rv$text, last_end + 1, sorted_annotations$start[i] - 1)
+
+          # Add the segment with proper character spans
+          char_counter <- last_end + 1
+          segment_chars <- strsplit(segment, "")[[1]]
+          for (j in seq_along(segment_chars)) {
+            char <- segment_chars[j]
+            if (char == "\n") {
+              displayed_text <- paste0(displayed_text,
+                                       '<span class="char" id="char_', char_counter, '">\n</span><br>')
+            } else {
+              displayed_text <- paste0(displayed_text,
+                                       '<span class="char" id="char_', char_counter, '">',
+                                       htmlEscape(char), '</span>')
+            }
+            char_counter <- char_counter + 1
+          }
         }
+
+        # Handle the annotation
         code_color <- rv$code_colors[sorted_annotations$code[i]]
-        if (is.null(code_color)) {
-          code_color <- "#CCCCCC"  # Default color if not found
+        if (is.null(code_color) || length(code_color) == 0) {
+          code_color <- "#FFE6CC"  # Use a readable default color if not found
         }
+
+        # Start the annotation span
         displayed_text <- paste0(displayed_text,
-                                 "<span class='code-display' style='background-color: ", code_color, ";' data-code='", sorted_annotations$code[i], "' data-start='", sorted_annotations$start[i], "' data-end='", sorted_annotations$end[i], "'>",
-                                 "[", sorted_annotations$code[i], "]",
-                                 paste0("<span class='char' id='char_", sorted_annotations$start[i]:sorted_annotations$end[i], "'>",
-                                        strsplit(substr(rv$text, sorted_annotations$start[i], sorted_annotations$end[i]), "")[[1]],
-                                        "</span>", collapse = ""),
-                                 "</span>")
+                                 '<span class="code-display" style="background-color: ',
+                                 code_color, ';" data-code="', htmlEscape(sorted_annotations$code[i]),
+                                 '" data-start="', sorted_annotations$start[i],
+                                 '" data-end="', sorted_annotations$end[i], '">[',
+                                 htmlEscape(sorted_annotations$code[i]), ']')
+
+        # Add the annotated text with line breaks preserved
+        for (j in sorted_annotations$start[i]:sorted_annotations$end[i]) {
+          if (j <= nchar(rv$text)) {
+            char <- substr(rv$text, j, j)
+            if (char == "\n") {
+              displayed_text <- paste0(displayed_text,
+                                       '<span class="char" id="char_', j, '">\n</span><br>')
+            } else {
+              displayed_text <- paste0(displayed_text,
+                                       '<span class="char" id="char_', j, '">',
+                                       htmlEscape(char), '</span>')
+            }
+          }
+        }
+
+        # Close the annotation span
+        displayed_text <- paste0(displayed_text, '</span>')
+
         last_end <- sorted_annotations$end[i]
       }
 
+      # Handle any remaining text after the last annotation
       if (last_end < nchar(rv$text)) {
-        displayed_text <- paste0(displayed_text,
-                                 paste0("<span class='char' id='char_", (last_end + 1):nchar(rv$text), "'>",
-                                        strsplit(substr(rv$text, last_end + 1, nchar(rv$text)), "")[[1]],
-                                        "</span>", collapse = ""))
+        segment <- substr(rv$text, last_end + 1, nchar(rv$text))
+        # Split by line breaks to handle them properly
+        lines <- strsplit(segment, "\n", fixed = TRUE)[[1]]
+
+        char_counter <- last_end + 1
+        for (i in seq_along(lines)) {
+          line <- lines[i]
+          # For each character in the line
+          if (nchar(line) > 0) {
+            for (j in 1:nchar(line)) {
+              char <- substr(line, j, j)
+              displayed_text <- paste0(displayed_text,
+                                       '<span class="char" id="char_', char_counter, '">',
+                                       htmlEscape(char), '</span>')
+              char_counter <- char_counter + 1
+            }
+          }
+
+          # Add a line break after each line (except the last line)
+          if (i < length(lines)) {
+            displayed_text <- paste0(displayed_text,
+                                     '<span class="char" id="char_', char_counter, '">\n</span><br>')
+            char_counter <- char_counter + 1
+          }
+        }
       }
 
       return(displayed_text)
+    }
+
+    # Helper function to properly escape HTML characters
+    htmlEscape <- function(text) {
+      text <- gsub("&", "&amp;", text)
+      text <- gsub("<", "&lt;", text)
+      text <- gsub(">", "&gt;", text)
+      text <- gsub("\"", "&quot;", text)
+      text <- gsub("'", "&#39;", text)
+      return(text)
     }
 
     observeEvent(input$replace_code, {
@@ -1418,10 +1589,36 @@ annotate_gui <- function() {
       HTML(update_text_display())
     })
 
+    # Observe changes to text and annotations and update display accordingly
+    observe({
+      # This will trigger whenever rv$text or rv$annotations changes
+      rv$text
+      rv$annotations
+      rv$code_colors
+
+      # Update the main text display
+      output$text_display <- renderUI({
+        HTML(update_text_display())
+      })
+
+      # Update the floating text display
+      output$floating_text_display <- renderUI({
+        HTML(update_text_display())
+      })
+    })
+
     # Create the floating text content once when the text changes
     observe({
+      req(rv$text)  # Ensure text exists before processing
+
+      # Force dependency on annotations to ensure updates
+      rv$annotations
+      rv$code_colors
+
+      # Update floating text content when text changes
       chars <- strsplit(rv$text, "")[[1]]
-      rv$floating_text_content <- paste0("<span class='char' id='float_char_", seq_along(chars), "'>", chars, "</span>", collapse = "")
+      rv$floating_text_content <- paste0("<span class='char' id='float_char_", seq_along(chars), "'>",
+                                         sapply(chars, htmlEscape), "</span>", collapse = "")
     })
 
     # Update the floating text display
@@ -1453,7 +1650,7 @@ annotate_gui <- function() {
       }
       filepath <- file.path(dir_path, filename)
 
-      # Create project state
+      # Create project state - include current_file_name
       project_state <- list(
         text = rv$text,
         annotations = rv$annotations,
@@ -1463,7 +1660,8 @@ annotate_gui <- function() {
         memos = rv$memos,
         code_descriptions = rv$code_descriptions,
         history = rv$history,
-        history_index = rv$history_index
+        history_index = rv$history_index,
+        current_file_name = rv$current_file_name  # Save current file name
       )
 
       # Save project
@@ -1511,6 +1709,12 @@ annotate_gui <- function() {
         # Update all reactive values with loaded state
         rv$text <- project_state$text
         rv$annotations <- project_state$annotations
+
+        # Handle annotations that don't have source_file column (backward compatibility)
+        if (!"source_file" %in% colnames(rv$annotations) && nrow(rv$annotations) > 0) {
+          rv$annotations$source_file <- "Legacy Import"
+        }
+
         rv$codes <- project_state$codes
         rv$code_tree <- project_state$code_tree
         rv$code_colors <- project_state$code_colors
@@ -1519,7 +1723,11 @@ annotate_gui <- function() {
         rv$history <- project_state$history
         rv$history_index <- project_state$history_index
         rv$current_project <- basename(filepath)
+        rv$current_file_name <- project_state$current_file_name  # Restore current file name
         rv$project_modified <- FALSE
+
+        # SYNC CODES WITH HIERARCHY AFTER LOADING
+        rv <- sync_codes_with_hierarchy(rv)
 
         # Update UI elements
         updateTextAreaInput(session, "text_input", value = rv$text)
@@ -1547,6 +1755,7 @@ annotate_gui <- function() {
         rv$codes <- project_state$codes
         rv$code_tree <- project_state$code_tree
         rv$code_colors <- project_state$code_colors
+        rv <- update_dark_colors(rv)
         rv$memos <- project_state$memos
         rv$code_descriptions <- project_state$code_descriptions
         rv$history <- project_state$history
@@ -1712,30 +1921,71 @@ annotate_gui <- function() {
           # Different handling based on file type
           file_ext <- tolower(tools::file_ext(input$file_input$name))
 
+          # Store the original file name (without path)
+          rv$current_file_name <- basename(input$file_input$name)
+
           if (file_ext == "txt") {
             # For plain text files, read directly as text with line breaks preserved
             text_content <- readLines(input$file_input$datapath, warn = FALSE)
-            rv$text <- paste(text_content, collapse = "\n")
+            new_text <- paste(text_content, collapse = "\n")
           } else {
             # For other formats (docx, pdf), use readtext
             imported_text <- readtext(input$file_input$datapath)
-            rv$text <- imported_text$text
+            new_text <- imported_text$text
           }
 
-          # Update history
-          rv$history <- c(rv$history[1:rv$history_index],
-                          list(list(text = rv$text, annotations = rv$annotations)))
-          rv$history_index <- rv$history_index + 1
+          # CLEAR ALL PREVIOUS STATE BEFORE IMPORTING NEW TEXT
+          rv$text <- new_text
+          rv$annotations <- data.frame(
+            start = integer(),
+            end = integer(),
+            text = character(),
+            code = character(),
+            memo = character(),
+            source_file = character(),  # Include source_file column
+            stringsAsFactors = FALSE
+          )
+          rv$codes <- character()
+          rv$code_colors <- character()
+          rv$memos <- list()
+          rv$code_descriptions <- list()
+
+          # Update history with the new clean state
+          rv$history <- list(list(text = rv$text, annotations = rv$annotations))
+          rv$history_index <- 1
+
+          # Clear action history
+          rv$action_history <- list()
+          rv$action_index <- 0
+
+          # Mark project as modified
+          rv$project_modified <- TRUE
 
           # Update the text input field - use this approach to preserve line breaks
           updateTextAreaInput(session, "text_input", value = rv$text)
+
+          # Clear any existing text selection
+          session$sendCustomMessage("clearSelection", list())
 
           # Force update of the text display
           output$text_display <- renderUI({
             HTML(update_text_display())
           })
+
+          # Also update floating text display
+          output$floating_text_display <- renderUI({
+            HTML(update_text_display())
+          })
+
+          # Clear any UI input fields
+          updateTextInput(session, "code", value = "")
+          updateTextAreaInput(session, "memo", value = "")
+
+          # Reset selection state
+          rv$selected_start <- NULL
+          rv$selected_end <- NULL
         },
-        success_msg = "Text imported successfully with preserved line breaks",
+        success_msg = paste("Text imported successfully from", rv$current_file_name, ". Previous annotations have been cleared."),
         error_msg = "Failed to import text file"
       )
     })
@@ -1949,6 +2199,7 @@ annotate_gui <- function() {
           text = substr(rv$text, rv$selected_start, rv$selected_end),
           code = input$code,
           memo = input$memo,
+          source_file = rv$current_file_name %||% "Unknown",  # Include source file
           stringsAsFactors = FALSE
         )
 
@@ -1965,9 +2216,39 @@ annotate_gui <- function() {
         # Update codes list
         rv$codes <- unique(c(rv$codes, input$code))
 
+        # AUTO-ADD CODE TO ROOT IF NOT ALREADY IN HIERARCHY
+        if (!code_exists_in_hierarchy(rv$code_tree, input$code)) {
+          new_code_node <- rv$code_tree$AddChild(input$code)
+          new_code_node$type <- "code"
+          new_code_node$description <- ""
+          new_code_node$created <- Sys.time()
+        }
+
         # Assign color if needed
         if (!(input$code %in% names(rv$code_colors))) {
-          rv$code_colors[input$code] <- sprintf("#%06X", sample(0:16777215, 1))
+          # Try to get a color from the predefined palette first
+          used_colors <- as.character(rv$code_colors)
+          new_color <- get_next_palette_color(used_colors)
+
+          # If all palette colors are used, generate a random readable color
+          if (new_color %in% used_colors) {
+            new_color <- generate_readable_color()
+
+            # Ensure the generated color is actually readable
+            attempts <- 0
+            while (!is_color_readable(new_color) && attempts < 10) {
+              new_color <- generate_readable_color()
+              attempts <- attempts + 1
+            }
+
+            # If we still don't have a readable color after 10 attempts, use a safe default
+            if (!is_color_readable(new_color)) {
+              safe_colors <- c("#FFE6CC", "#E6F3FF", "#E6FFE6", "#FFE6F3", "#F3E6FF")
+              new_color <- sample(safe_colors, 1)
+            }
+          }
+
+          rv$code_colors[input$code] <- new_color
         }
 
         # Clear inputs
@@ -2010,9 +2291,22 @@ annotate_gui <- function() {
           text = substr(rv$text, rv$selected_start, rv$selected_end),
           code = input$code_to_apply,
           memo = "",
+          source_file = rv$current_file_name %||% "Unknown",  # Include source file
           stringsAsFactors = FALSE
         )
         rv$annotations <- rbind(rv$annotations, new_annotation)
+
+        # Update codes list
+        rv$codes <- unique(c(rv$codes, input$code_to_apply))
+
+        # AUTO-ADD CODE TO ROOT IF NOT ALREADY IN HIERARCHY
+        if (!code_exists_in_hierarchy(rv$code_tree, input$code_to_apply)) {
+          new_code_node <- rv$code_tree$AddChild(input$code_to_apply)
+          new_code_node$type <- "code"
+          new_code_node$description <- ""
+          new_code_node$created <- Sys.time()
+        }
+
         updateTextInput(session, "code", value = input$code_to_apply)
         showNotification("Code applied successfully!", type = "message")
         save_state()
@@ -2116,31 +2410,77 @@ annotate_gui <- function() {
     observeEvent(input$code_co_occurrence, {
       req(nrow(rv$annotations) > 0)
 
-      # Generate the enhanced analysis
-      analysis_results <- generate_code_co_occurrence_analysis(rv$annotations)
+      # Get the selected analytical unit
+      unit <- input$cooccurrence_unit %||% "paragraph"
+
+      # Generate the enhanced analysis with unit-based methodology
+      analysis_results <- generate_code_co_occurrence_analysis(
+        annotations = rv$annotations,
+        text = rv$text,
+        unit = unit
+      )
 
       # Store results in reactive values for access across multiple outputs
       rv$co_occurrence_results <- analysis_results
 
-      # Create the modal dialog with multiple tabs
+      # Create the modal dialog with multiple tabs including unit information
       showModal(modalDialog(
-        title = "Code Co-occurrence Analysis",
+        title = paste("Code Co-occurrence Analysis -",
+                      tools::toTitleCase(analysis_results$unit_info$analytical_unit), "Level"),
 
         tabsetPanel(
           id = "co_occurrence_tabs",
+
+          # Unit Information tab
+          tabPanel("Analysis Info",
+                   fluidRow(
+                     column(6,
+                            h4("Analysis Settings"),
+                            tags$div(
+                              tags$p(tags$strong("Analytical Unit: "),
+                                     tools::toTitleCase(analysis_results$unit_info$analytical_unit)),
+                              tags$p(tags$strong("Total Units Analyzed: "),
+                                     analysis_results$unit_info$total_units),
+                              tags$p(tags$strong("Mean Codes per Unit: "),
+                                     sprintf("%.2f", analysis_results$unit_info$codes_per_unit$mean_codes_per_unit)),
+                              tags$p(tags$strong("Max Codes in Single Unit: "),
+                                     analysis_results$unit_info$codes_per_unit$max_codes_per_unit),
+                              tags$p(tags$strong("Units with Multiple Codes: "),
+                                     analysis_results$unit_info$codes_per_unit$units_with_multiple_codes)
+                            )
+                     ),
+                     column(6,
+                            h4("Co-occurrence Definition"),
+                            tags$div(
+                              switch(analysis_results$unit_info$analytical_unit,
+                                     "sentence" = tags$div(
+                                       tags$p("Codes are considered co-occurring when they appear within the same sentence."),
+                                       tags$p(tags$em("Example: 'Theme A' and 'Theme B' codes applied to different parts of the same sentence will be counted as co-occurring."))
+                                     ),
+                                     "paragraph" = tags$div(
+                                       tags$p("Codes are considered co-occurring when they appear within the same paragraph."),
+                                       tags$p(tags$em("Example: 'Theme A' and 'Theme B' codes applied to different sentences within the same paragraph will be counted as co-occurring."))
+                                     ),
+                                     "document" = tags$div(
+                                       tags$p("Codes are considered co-occurring when they appear anywhere within the same document."),
+                                       tags$p(tags$em("Example: 'Theme A' and 'Theme B' codes applied to any parts of the document will be counted as co-occurring."))
+                                     )
+                              )
+                            )
+                     )
+                   )),
 
           # Network visualization tab
           tabPanel("Network View",
                    plotOutput("code_co_occurrence_network", height = "500px"),
                    hr(),
-                   helpText("Line thickness indicates Jaccard similarity strength",
-                            "Line opacity shows phi coefficient magnitude")),
+                   helpText("Node size reflects total co-occurrences. Line thickness indicates Jaccard similarity strength. Line opacity shows phi coefficient magnitude.")),
 
           # Heatmap visualization tab
           tabPanel("Heatmap View",
                    plotOutput("code_co_occurrence_heatmap", height = "500px"),
                    hr(),
-                   helpText("Darker colors indicate stronger co-occurrence relationships")),
+                   helpText("Darker colors indicate stronger co-occurrence relationships based on Jaccard similarity coefficients.")),
 
           # Statistics tab
           tabPanel("Statistics",
@@ -2170,12 +2510,18 @@ annotate_gui <- function() {
     output$co_occurrence_summary <- renderTable({
       req(rv$co_occurrence_results)
       summary_df <- data.frame(
-        Metric = c("Total Number of Codes",
+        Metric = c("Analytical Unit",
+                   "Total Units Analyzed",
+                   "Units with Multiple Codes",
+                   "Total Number of Codes",
                    "Maximum Co-occurrence Count",
                    "Maximum Jaccard Similarity",
                    "Mean Jaccard Similarity",
-                   "Number of Significant Pairs (|\u03c6| > 0.3)"),
-        Value = c(rv$co_occurrence_results$summary$total_codes,
+                   "Significant Pairs (|phi| > 0.3)"),
+        Value = c(tools::toTitleCase(rv$co_occurrence_results$unit_info$analytical_unit),
+                  rv$co_occurrence_results$unit_info$total_units,
+                  rv$co_occurrence_results$unit_info$codes_per_unit$units_with_multiple_codes,
+                  rv$co_occurrence_results$summary$total_codes,
                   rv$co_occurrence_results$summary$max_co_occurrence,
                   round(rv$co_occurrence_results$summary$max_jaccard, 3),
                   round(rv$co_occurrence_results$summary$mean_jaccard, 3),
@@ -2708,7 +3054,7 @@ annotate_gui <- function() {
 #' @importFrom shiny runApp shinyApp fluidPage actionButton observeEvent renderUI
 #'   showNotification showModal modalDialog removeModal updateTextAreaInput
 #'   updateTextInput tabPanel fileInput renderTable renderPlot plotOutput
-#'   tableOutput textInput textAreaInput selectInput checkboxGroupInput
+#'   tableOutput textInput textOutput checkboxInput textAreaInput selectInput checkboxGroupInput
 #'   tags icon reactive reactiveValues isolate req
 #' @importFrom shinyjs useShinyjs toggle runjs
 #' @importFrom data.tree Node as.Node
@@ -2790,31 +3136,82 @@ handle_error <- function(expr, success_msg = NULL, error_msg = NULL, finally_msg
 #' @return Invisible NULL, called for side effect
 #' @keywords internal
 save_project_interactive <- function(rv, input, session) {
-  # Get the project directory
-  project_dir <- get_project_dir(rv)
+  # Check if project has a saved location
+  has_saved_location <- !is.null(rv$project_save_path) &&
+    !is.null(rv$current_project)
 
-  showModal(modalDialog(
-    title = "Save Project",
-    textInput("project_name", "Project Name:",
-              value = rv$current_project %||% ""),
-    # Show current save location
-    tags$div(
-      style = "margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;",
-      tags$p(
-        tags$strong("Save Location: "),
-        if (!is.null(rv$data_dir)) {
-          "User directory (persistent storage)"
-        } else {
-          "Temporary directory (data will not persist between sessions)"
-        }
+  if (has_saved_location) {
+    # Show simplified dialog for existing projects
+    showModal(modalDialog(
+      title = "Save Project",
+      textInput("project_name", "Project Name:",
+                value = rv$current_project),
+
+      # Show current save location
+      tags$div(
+        style = "margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;",
+        tags$p(
+          tags$strong("Current Save Location: "),
+          tags$br(),
+          tags$span(style = "font-family: monospace; font-size: 0.9em;",
+                    rv$project_save_path)
+        )
       ),
-      tags$p(tags$small(project_dir))
-    ),
-    footer = tagList(
-      modalButton("Cancel"),
-      actionButton("confirm_save_project", "Save")
-    )
-  ))
+
+      # Option to change location
+      checkboxInput("change_location", "Save to different location", value = FALSE),
+
+      # Conditional directory selection
+      conditionalPanel(
+        condition = "input.change_location == true",
+        div(style = "margin: 10px 0;",
+            shinyDirButton("directory_select",
+                           label = "Choose New Directory",
+                           title = "Select Directory to Save Project")
+        ),
+        verbatimTextOutput("selected_dir")
+      ),
+
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_save_project", "Save")
+      )
+    ))
+  } else {
+    # Show full dialog for new projects
+    showModal(modalDialog(
+      title = "Save Project",
+      textInput("project_name", "Project Name:",
+                value = rv$current_project %||% ""),
+
+      # Show current save location info
+      tags$div(
+        style = "margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;",
+        tags$p(
+          tags$strong("Save Location: "),
+          if (!is.null(rv$data_dir)) {
+            "User directory (persistent storage)"
+          } else {
+            "Temporary directory (data will not persist between sessions)"
+          }
+        ),
+        tags$p(tags$small(get_project_dir(rv)))
+      ),
+
+      # Directory selection for new projects
+      div(style = "margin: 10px 0;",
+          shinyDirButton("directory_select",
+                         label = "Choose Directory",
+                         title = "Select Directory to Save Project")
+      ),
+      verbatimTextOutput("selected_dir"),
+
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_save_project", "Save")
+      )
+    ))
+  }
 }
 
 #' Display interactive dialog for saving annotated text
@@ -3054,7 +3451,26 @@ apply_action <- function(rv, action, reverse = FALSE) {
              rv$annotations$code[rv$annotations$code %in% data$old_codes] <- data$new_code
 
              # Update code colors
-             rv$code_colors[data$new_code] <- sprintf("#%06X", sample(0:16777215, 1))
+             used_colors <- as.character(rv$code_colors)
+             new_color <- get_next_palette_color(used_colors)
+
+             if (new_color %in% used_colors) {
+               new_color <- generate_readable_color()
+
+               attempts <- 0
+               while (!is_color_readable(new_color) && attempts < 10) {
+                 new_color <- generate_readable_color()
+                 attempts <- attempts + 1
+               }
+
+               if (!is_color_readable(new_color)) {
+                 safe_colors <- c("#FFE6CC", "#E6F3FF", "#E6FFE6", "#FFE6F3", "#F3E6FF")
+                 new_color <- sample(safe_colors, 1)
+               }
+             }
+
+             rv$code_colors[data$new_code] <- new_color
+
              # Remove old code colors
              rv$code_colors <- rv$code_colors[!names(rv$code_colors) %in% data$old_codes]
 
@@ -3457,8 +3873,18 @@ create_plain_text_annotations <- function(text, annotations) {
     if (sorted_annotations$start[i] > last_end + 1) {
       plain_text <- paste0(plain_text, substr(text, last_end + 1, sorted_annotations$start[i] - 1))
     }
+
+    # Include source file information in the annotation marker
+    source_info <- if ("source_file" %in% colnames(sorted_annotations) &&
+                       !is.na(sorted_annotations$source_file[i]) &&
+                       sorted_annotations$source_file[i] != "") {
+      paste0(" (", sorted_annotations$source_file[i], ")")
+    } else {
+      ""
+    }
+
     plain_text <- paste0(plain_text,
-                         "[", sorted_annotations$code[i], ": ",
+                         "[", sorted_annotations$code[i], source_info, ": ",
                          substr(text, sorted_annotations$start[i], sorted_annotations$end[i]),
                          "]")
     last_end <- sorted_annotations$end[i]
@@ -3469,6 +3895,51 @@ create_plain_text_annotations <- function(text, annotations) {
   }
 
   return(plain_text)
+}
+
+# Update the apply_action function to handle source_file
+apply_action <- function(rv, action, reverse = FALSE) {
+  data <- if (reverse) action$reverse_data else action$data
+
+  switch(action$type,
+         "add_annotation" = {
+           if (reverse) {
+             # Remove annotation
+             if(nrow(rv$annotations) > 0) {
+               rv$annotations <- rv$annotations[-which(
+                 rv$annotations$start == data$start &
+                   rv$annotations$end == data$end &
+                   rv$annotations$code == data$code
+               ), ]
+             }
+           } else {
+             # Add annotation
+             if(is.null(rv$annotations)) {
+               rv$annotations <- data.frame(
+                 start = integer(),
+                 end = integer(),
+                 text = character(),
+                 code = character(),
+                 memo = character(),
+                 source_file = character(),
+                 stringsAsFactors = FALSE
+               )
+             }
+
+             # Ensure data has source_file column
+             if (!"source_file" %in% colnames(data)) {
+               data$source_file <- rv$current_file_name %||% "Unknown"
+             }
+
+             rv$annotations <- rbind(rv$annotations, data)
+           }
+         },
+         "merge_codes" = {
+           # Handle merge_codes as before...
+           # (existing merge_codes logic remains the same)
+         })
+
+  invisible(rv)
 }
 
 #' Initialize new project
@@ -3497,6 +3968,7 @@ create_new_project <- function(rv, session) {
     text = character(),
     code = character(),
     memo = character(),
+    source_file = character(),  # Include source_file column
     stringsAsFactors = FALSE
   )
   rv$codes <- character()
@@ -3507,6 +3979,7 @@ create_new_project <- function(rv, session) {
   rv$history <- list(list(text = "", annotations = data.frame()))
   rv$history_index <- 1
   rv$current_project <- NULL
+  rv$current_file_name <- NULL  # Reset current file name
   rv$project_modified <- FALSE
   rv$action_history <- list()
   rv$action_index <- 0
@@ -3555,12 +4028,78 @@ generate_code_frequency_plot <- function(annotations) {
   return(recordPlot())
 }
 
-#' Generate code co-occurrence statistics and visualization
+#' Calculate summary statistics for co-occurrence analysis
 #'
 #' @description
-#' Performs a comprehensive analysis of code co-occurrences in the text, including
-#' calculation of various similarity metrics and generation of network and heatmap
-#' visualizations.
+#' Calculates summary statistics for code co-occurrence matrices including
+#' maximum values, means, and counts of significant relationships.
+#'
+#' @param co_matrix Matrix of raw co-occurrence counts
+#' @param jaccard_matrix Matrix of Jaccard similarity coefficients
+#' @param phi_matrix Matrix of Phi coefficients
+#' @param codes Character vector of code names
+#'
+#' @return List containing summary statistics:
+#'   \itemize{
+#'     \item total_codes: Total number of codes in analysis
+#'     \item max_co_occurrence: Maximum co-occurrence count
+#'     \item max_jaccard: Maximum Jaccard similarity coefficient
+#'     \item mean_jaccard: Mean Jaccard similarity coefficient (excluding diagonal)
+#'     #' \item significant_pairs: Number of code pairs with |phi| > 0.3
+#'   }
+#' @keywords internal
+calculate_cooccurrence_summary <- function(co_matrix, jaccard_matrix, phi_matrix, codes) {
+  tryCatch({
+    n_codes <- length(codes)
+
+    if (n_codes == 0 || nrow(co_matrix) == 0) {
+      return(list(
+        total_codes = 0,
+        max_co_occurrence = 0,
+        max_jaccard = 0,
+        mean_jaccard = 0,
+        significant_pairs = 0
+      ))
+    }
+
+    # Calculate maximum co-occurrence count
+    max_cooccur <- if(length(co_matrix) > 0) max(co_matrix, na.rm = TRUE) else 0
+
+    # Calculate Jaccard statistics (excluding diagonal)
+    jaccard_upper <- jaccard_matrix[upper.tri(jaccard_matrix)]
+    max_jaccard <- if(length(jaccard_upper) > 0) max(jaccard_upper, na.rm = TRUE) else 0
+    mean_jaccard <- if(length(jaccard_upper) > 0) mean(jaccard_upper, na.rm = TRUE) else 0
+
+    # Count significant Phi coefficient pairs (|phi| > 0.3)
+    phi_upper <- phi_matrix[upper.tri(phi_matrix)]
+    significant_pairs <- if(length(phi_upper) > 0) sum(abs(phi_upper) > 0.3, na.rm = TRUE) else 0
+
+    return(list(
+      total_codes = n_codes,
+      max_co_occurrence = max_cooccur,
+      max_jaccard = max_jaccard,
+      mean_jaccard = mean_jaccard,
+      significant_pairs = significant_pairs
+    ))
+
+  }, error = function(e) {
+    # Return safe defaults if calculation fails
+    return(list(
+      total_codes = length(codes),
+      max_co_occurrence = 0,
+      max_jaccard = 0,
+      mean_jaccard = 0,
+      significant_pairs = 0
+    ))
+  })
+}
+
+#' Generate code co-occurrence statistics and visualization with unit-based analysis
+#'
+#' @description
+#' Performs a comprehensive analysis of code co-occurrences using standard unit-based
+#' methodology. Analyzes codes that appear together within the same analytical unit
+#' (sentence, paragraph, or document) rather than character-level overlap.
 #'
 #' @param annotations Data frame containing text annotations with columns:
 #'   \itemize{
@@ -3568,6 +4107,8 @@ generate_code_frequency_plot <- function(annotations) {
 #'     \item end: numeric, ending position of annotation
 #'     \item code: character, code applied to the annotation
 #'   }
+#' @param text Character string containing the original text
+#' @param unit Character string specifying analytical unit: "sentence", "paragraph", or "document"
 #'
 #' @return List containing:
 #'   \itemize{
@@ -3577,158 +4118,550 @@ generate_code_frequency_plot <- function(annotations) {
 #'     \item network_plot: Network visualization of code relationships
 #'     \item heatmap_plot: Heatmap visualization of code co-occurrences
 #'     \item summary: List of summary statistics
+#'     \item unit_info: Information about the analytical units used
 #'   }
 #'
 #' @importFrom graphics par plot points text lines image axis
 #' @importFrom grDevices rgb colorRampPalette recordPlot
 #' @importFrom stats cor
 #' @keywords internal
-generate_code_co_occurrence_analysis <- function(annotations) {
+generate_code_co_occurrence_analysis <- function(annotations, text = NULL, unit = "paragraph") {
+  # Validate input parameters
+  unit <- match.arg(unit, choices = c("sentence", "paragraph", "document"))
+
+  if (is.null(annotations) || nrow(annotations) == 0) {
+    return(create_empty_cooccurrence_result(unit))
+  }
+
   # Get unique codes
   codes <- unique(annotations$code)
   n_codes <- length(codes)
 
-  # Initialize matrices
-  co_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
-                      dimnames = list(codes, codes))
-  jaccard_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
-                           dimnames = list(codes, codes))
-  phi_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
-                       dimnames = list(codes, codes))
-
-  # Create binary occurrence vectors for each code
-  code_occurrences <- lapply(codes, function(code) {
-    intervals <- annotations[annotations$code == code, c("start", "end")]
-    sort(unique(unlist(apply(intervals, 1, function(x) seq(x[1], x[2])))))
-  })
-  names(code_occurrences) <- codes
-
-  # Calculate co-occurrence and similarity matrices
-  for (i in 1:n_codes) {
-    for (j in 1:n_codes) {
-      if (i != j) {
-        # Get occurrence vectors
-        code1_pos <- code_occurrences[[i]]
-        code2_pos <- code_occurrences[[j]]
-
-        # Calculate co-occurrence (overlap)
-        overlap <- length(intersect(code1_pos, code2_pos))
-        co_matrix[i, j] <- overlap
-
-        # Calculate Jaccard similarity
-        union_size <- length(unique(c(code1_pos, code2_pos)))
-        jaccard_matrix[i, j] <- if(union_size > 0) overlap / union_size else 0
-
-        # Calculate Phi coefficient
-        n11 <- overlap  # co-occurrence count
-        n00 <- nchar(max(annotations$end)) - length(unique(c(code1_pos, code2_pos)))  # neither code
-        n10 <- length(code1_pos) - overlap  # code1 only
-        n01 <- length(code2_pos) - overlap  # code2 only
-        n <- n11 + n10 + n01 + n00
-
-        # Phi coefficient calculation
-        if (n > 0) {
-          expected <- (length(code1_pos) * length(code2_pos)) / n
-          phi_matrix[i, j] <- (n11 - expected) /
-            sqrt((length(code1_pos) * length(code2_pos) *
-                    (n - length(code1_pos)) * (n - length(code2_pos))) / n)
-        }
-      }
-    }
+  if (n_codes <= 1) {
+    return(create_empty_cooccurrence_result(unit))
   }
 
-  # Generate network visualization
-  network_plot <- function() {
-    # Save current par settings and restore on exit
-    oldpar <- par(no.readonly = TRUE)
-    on.exit(par(oldpar))
-
-    if (n_codes <= 1) {
-      plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1),
-           main = if(n_codes == 0) "No codes available" else "Only one code present")
-      if (n_codes == 1) {
-        points(0.5, 0.5, pch = 16, col = "red", cex = 2)
-        text(0.5, 0.5, labels = codes[1], pos = 3, offset = 0.5)
-      }
-      return(recordPlot())
-    }
-
-    # Calculate node positions using circular layout
-    angles <- seq(0, 2 * pi, length.out = n_codes + 1)[-1]
-    x <- 0.5 + 0.4 * cos(angles)
-    y <- 0.5 + 0.4 * sin(angles)
-
-    # Set up plot
-    par(mar = c(1, 1, 2, 1))
-    plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1),
-         main = "Code Co-occurrence Network")
-
-    # Draw edges
-    for (i in 1:n_codes) {
-      for (j in 1:n_codes) {
-        if (i < j && jaccard_matrix[i, j] > 0) {
-          # Scale line width based on Jaccard similarity
-          lwd <- 1 + 5 * jaccard_matrix[i, j]
-          # Scale opacity based on phi coefficient
-          alpha <- 0.3 + 0.7 * abs(phi_matrix[i, j])
-          lines(c(x[i], x[j]), c(y[i], y[j]),
-                lwd = lwd,
-                col = grDevices::rgb(0, 0, 1, alpha = alpha))
-        }
-      }
-    }
-
-    # Draw nodes and labels
-    points(x, y, pch = 16, col = "red", cex = 2)
-    text(x, y, labels = codes, pos = 3, offset = 0.5)
-
-    return(grDevices::recordPlot())
+  # Parse text into analytical units if text is provided
+  if (!is.null(text) && nchar(text) > 0) {
+    text_units <- parse_text_into_units(text, unit)
+    unit_assignments <- assign_annotations_to_units(annotations, text_units)
+  } else {
+    # Fallback: use position-based units if no text provided
+    unit_assignments <- assign_annotations_to_position_units(annotations, unit)
   }
 
-  # Heatmap plot function
-  heatmap_plot <- function() {
-    # Save current par settings and restore on exit
-    oldpar <- par(no.readonly = TRUE)
-    on.exit(par(oldpar))
+  # Calculate co-occurrence matrices
+  co_matrix <- calculate_unit_cooccurrence_matrix(codes, unit_assignments)
+  jaccard_matrix <- calculate_jaccard_similarity_matrix(codes, unit_assignments)
+  phi_matrix <- calculate_phi_coefficient_matrix(codes, unit_assignments)
 
-    if (n_codes == 0) {
-      plot(1, type = "n", xlab = "", ylab = "",
-           main = "No codes available for heatmap")
-      return(grDevices::recordPlot())
-    }
+  # Generate visualizations
+  network_plot <- generate_network_visualization(co_matrix, jaccard_matrix, phi_matrix, codes)
+  heatmap_plot <- generate_heatmap_visualization(jaccard_matrix, codes)
 
-    # Set up the plotting area
-    par(mar = c(8, 8, 2, 2))
+  # Calculate summary statistics
+  summary_stats <- calculate_cooccurrence_summary(co_matrix, jaccard_matrix, phi_matrix, codes)
 
-    # Create the heatmap
-    graphics::image(1:n_codes, 1:n_codes, jaccard_matrix,
-                    main = "Code Co-occurrence Heatmap",
-                    xlab = "", ylab = "",
-                    axes = FALSE,
-                    col = grDevices::colorRampPalette(c("white", "steelblue"))(100))
+  # Add unit information
+  unit_info <- list(
+    analytical_unit = unit,
+    total_units = length(unique(unit_assignments$unit_id)),
+    codes_per_unit = calculate_codes_per_unit_stats(unit_assignments)
+  )
 
-    # Add axes with code labels
-    graphics::axis(1, 1:n_codes, codes, las = 2)
-    graphics::axis(2, 1:n_codes, codes, las = 2)
-
-    return(grDevices::recordPlot())
-  }
-
-  # Return results
   return(list(
     co_occurrence = co_matrix,
     jaccard_similarity = jaccard_matrix,
     phi_coefficient = phi_matrix,
-    network_plot = network_plot(),
-    heatmap_plot = heatmap_plot(),
-    summary = list(
-      total_codes = n_codes,
-      max_co_occurrence = max(co_matrix),
-      max_jaccard = max(jaccard_matrix),
-      mean_jaccard = mean(jaccard_matrix[upper.tri(jaccard_matrix)]),
-      significant_pairs = sum(abs(phi_matrix) > 0.3, na.rm = TRUE) / 2
-    )
+    network_plot = network_plot,
+    heatmap_plot = heatmap_plot,
+    summary = summary_stats,
+    unit_info = unit_info
   ))
+}
+
+#' Parse text into analytical units
+#'
+#' @description
+#' Divides text into sentences, paragraphs, or document-level units for co-occurrence analysis.
+#'
+#' @param text Character string containing the text to parse
+#' @param unit Character string specifying unit type: "sentence", "paragraph", or "document"
+#'
+#' @return Data frame with columns:
+#'   \itemize{
+#'     \item unit_id: unique identifier for each unit
+#'     \item start: starting character position of unit
+#'     \item end: ending character position of unit
+#'     \item text: text content of the unit
+#'   }
+#' @keywords internal
+parse_text_into_units <- function(text, unit) {
+  if (is.null(text) || nchar(text) == 0) {
+    return(data.frame(unit_id = integer(0), start = integer(0),
+                      end = integer(0), text = character(0),
+                      stringsAsFactors = FALSE))
+  }
+
+  switch(unit,
+         "sentence" = parse_sentences(text),
+         "paragraph" = parse_paragraphs(text),
+         "document" = parse_document(text)
+  )
+}
+
+#' Parse text into sentences
+#'
+#' @description
+#' Splits text into sentence units using punctuation and spacing patterns.
+#'
+#' @param text Character string to parse
+#' @return Data frame of sentence units
+#' @keywords internal
+parse_sentences <- function(text) {
+  # Split on sentence-ending punctuation followed by whitespace or end of string
+  sentence_pattern <- "(?<=[.!?])\\s+(?=[A-Z])|(?<=[.!?])$"
+
+  # Find sentence boundaries
+  boundaries <- gregexpr(sentence_pattern, text, perl = TRUE)[[1]]
+
+  if (length(boundaries) == 1 && boundaries[1] == -1) {
+    # No sentence boundaries found, treat as single sentence
+    return(data.frame(
+      unit_id = 1,
+      start = 1,
+      end = nchar(text),
+      text = text,
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  # Calculate start and end positions
+  starts <- c(1, boundaries + 1)
+  ends <- c(boundaries, nchar(text))
+
+  # Extract sentence texts
+  sentences <- mapply(function(s, e) substr(text, s, e), starts, ends, USE.NAMES = FALSE)
+  sentences <- trimws(sentences)
+
+  # Remove empty sentences
+  non_empty <- nchar(sentences) > 0
+
+  data.frame(
+    unit_id = seq_along(sentences)[non_empty],
+    start = starts[non_empty],
+    end = ends[non_empty],
+    text = sentences[non_empty],
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Parse text into paragraphs
+#'
+#' @description
+#' Splits text into paragraph units using line breaks.
+#'
+#' @param text Character string to parse
+#' @return Data frame of paragraph units
+#' @keywords internal
+parse_paragraphs <- function(text) {
+  # Split on double line breaks or single line breaks
+  paragraphs <- strsplit(text, "\n\n|\n")[[1]]
+  paragraphs <- trimws(paragraphs)
+
+  # Remove empty paragraphs
+  paragraphs <- paragraphs[nchar(paragraphs) > 0]
+
+  if (length(paragraphs) == 0) {
+    return(data.frame(unit_id = integer(0), start = integer(0),
+                      end = integer(0), text = character(0),
+                      stringsAsFactors = FALSE))
+  }
+
+  # Calculate positions in original text
+  cumulative_lengths <- cumsum(nchar(paragraphs) + 1) # +1 for line breaks
+  starts <- c(1, cumulative_lengths[-length(cumulative_lengths)] + 1)
+  ends <- cumulative_lengths - 1
+  ends[length(ends)] <- nchar(text) # Adjust last paragraph end
+
+  data.frame(
+    unit_id = seq_along(paragraphs),
+    start = starts,
+    end = ends,
+    text = paragraphs,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Parse text as single document unit
+#'
+#' @description
+#' Treats the entire text as a single analytical unit.
+#'
+#' @param text Character string to parse
+#' @return Data frame with single document unit
+#' @keywords internal
+parse_document <- function(text) {
+  data.frame(
+    unit_id = 1,
+    start = 1,
+    end = nchar(text),
+    text = text,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Assign annotations to analytical units
+#'
+#' @description
+#' Maps each annotation to its corresponding analytical unit(s) based on position overlap.
+#'
+#' @param annotations Data frame of annotations
+#' @param text_units Data frame of text units from parse_text_into_units
+#'
+#' @return Data frame with columns:
+#'   \itemize{
+#'     \item unit_id: identifier of the analytical unit
+#'     \item code: code that appears in this unit
+#'     \item annotation_start: start position of annotation
+#'     \item annotation_end: end position of annotation
+#'   }
+#' @keywords internal
+assign_annotations_to_units <- function(annotations, text_units) {
+  if (nrow(annotations) == 0 || nrow(text_units) == 0) {
+    return(data.frame(unit_id = integer(0), code = character(0),
+                      annotation_start = integer(0), annotation_end = integer(0),
+                      stringsAsFactors = FALSE))
+  }
+
+  assignments <- list()
+
+  for (i in seq_len(nrow(annotations))) {
+    ann_start <- annotations$start[i]
+    ann_end <- annotations$end[i]
+    ann_code <- annotations$code[i]
+
+    # Find units that overlap with this annotation
+    overlapping_units <- which(
+      text_units$start <= ann_end & text_units$end >= ann_start
+    )
+
+    if (length(overlapping_units) > 0) {
+      for (unit_idx in overlapping_units) {
+        assignments[[length(assignments) + 1]] <- data.frame(
+          unit_id = text_units$unit_id[unit_idx],
+          code = ann_code,
+          annotation_start = ann_start,
+          annotation_end = ann_end,
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+  }
+
+  if (length(assignments) == 0) {
+    return(data.frame(unit_id = integer(0), code = character(0),
+                      annotation_start = integer(0), annotation_end = integer(0),
+                      stringsAsFactors = FALSE))
+  }
+
+  do.call(rbind, assignments)
+}
+
+#' Assign annotations to position-based units (fallback)
+#'
+#' @description
+#' Fallback method when text is not available. Creates artificial units based on annotation positions.
+#'
+#' @param annotations Data frame of annotations
+#' @param unit Character string specifying unit type
+#'
+#' @return Data frame of unit assignments
+#' @keywords internal
+assign_annotations_to_position_units <- function(annotations, unit) {
+  if (nrow(annotations) == 0) {
+    return(data.frame(unit_id = integer(0), code = character(0),
+                      annotation_start = integer(0), annotation_end = integer(0),
+                      stringsAsFactors = FALSE))
+  }
+
+  switch(unit,
+         "sentence" = {
+           # Group annotations by proximity (within 100 characters = same "sentence")
+           unit_assignments <- assign_by_proximity(annotations, max_distance = 100)
+         },
+         "paragraph" = {
+           # Group annotations by proximity (within 500 characters = same "paragraph")
+           unit_assignments <- assign_by_proximity(annotations, max_distance = 500)
+         },
+         "document" = {
+           # All annotations in same document unit
+           unit_assignments <- data.frame(
+             unit_id = rep(1, nrow(annotations)),
+             code = annotations$code,
+             annotation_start = annotations$start,
+             annotation_end = annotations$end,
+             stringsAsFactors = FALSE
+           )
+         }
+  )
+
+  unit_assignments
+}
+
+#' Assign annotations by proximity
+#'
+#' @description
+#' Groups annotations into units based on their proximity to each other.
+#'
+#' @param annotations Data frame of annotations
+#' @param max_distance Maximum distance between annotations to be in same unit
+#'
+#' @return Data frame of unit assignments
+#' @keywords internal
+assign_by_proximity <- function(annotations, max_distance) {
+  # Sort annotations by start position
+  sorted_annotations <- annotations[order(annotations$start), ]
+
+  unit_id <- 1
+  current_unit_end <- sorted_annotations$end[1]
+  unit_assignments <- integer(nrow(sorted_annotations))
+  unit_assignments[1] <- unit_id
+
+  for (i in 2:nrow(sorted_annotations)) {
+    if (sorted_annotations$start[i] - current_unit_end <= max_distance) {
+      # Same unit
+      unit_assignments[i] <- unit_id
+      current_unit_end <- max(current_unit_end, sorted_annotations$end[i])
+    } else {
+      # New unit
+      unit_id <- unit_id + 1
+      unit_assignments[i] <- unit_id
+      current_unit_end <- sorted_annotations$end[i]
+    }
+  }
+
+  data.frame(
+    unit_id = unit_assignments,
+    code = sorted_annotations$code,
+    annotation_start = sorted_annotations$start,
+    annotation_end = sorted_annotations$end,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Calculate unit-based co-occurrence matrix
+#'
+#' @description
+#' Creates a matrix showing how often pairs of codes appear together in the same analytical units.
+#'
+#' @param codes Character vector of unique codes
+#' @param unit_assignments Data frame from assign_annotations_to_units
+#'
+#' @return Symmetric matrix with co-occurrence counts
+#' @keywords internal
+calculate_unit_cooccurrence_matrix <- function(codes, unit_assignments) {
+  n_codes <- length(codes)
+  co_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
+                      dimnames = list(codes, codes))
+
+  if (nrow(unit_assignments) == 0) {
+    return(co_matrix)
+  }
+
+  # Get codes present in each unit
+  units_with_codes <- split(unit_assignments$code, unit_assignments$unit_id)
+
+  # Count co-occurrences
+  for (unit_codes in units_with_codes) {
+    unique_codes_in_unit <- unique(unit_codes)
+
+    if (length(unique_codes_in_unit) > 1) {
+      # Generate all pairs of codes in this unit
+      code_pairs <- expand.grid(unique_codes_in_unit, unique_codes_in_unit,
+                                stringsAsFactors = FALSE)
+
+      for (j in seq_len(nrow(code_pairs))) {
+        code1 <- code_pairs[j, 1]
+        code2 <- code_pairs[j, 2]
+
+        if (code1 != code2) {
+          co_matrix[code1, code2] <- co_matrix[code1, code2] + 1
+        }
+      }
+    }
+  }
+
+  co_matrix
+}
+
+#' Calculate Jaccard similarity matrix for unit-based co-occurrence
+#'
+#' @description
+#' Calculates Jaccard similarity coefficients based on unit co-occurrence patterns.
+#'
+#' @param codes Character vector of unique codes
+#' @param unit_assignments Data frame from assign_annotations_to_units
+#'
+#' @return Symmetric matrix with Jaccard similarity coefficients
+#' @keywords internal
+calculate_jaccard_similarity_matrix <- function(codes, unit_assignments) {
+  n_codes <- length(codes)
+  jaccard_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
+                           dimnames = list(codes, codes))
+
+  if (nrow(unit_assignments) == 0) {
+    return(jaccard_matrix)
+  }
+
+  # Create binary presence matrix: codes x units
+  units_with_codes <- split(unit_assignments$code, unit_assignments$unit_id)
+  all_unit_ids <- unique(unit_assignments$unit_id)
+
+  code_presence <- matrix(0, nrow = n_codes, ncol = length(all_unit_ids),
+                          dimnames = list(codes, as.character(all_unit_ids)))
+
+  for (i in seq_along(all_unit_ids)) {
+    unit_id <- all_unit_ids[i]
+    codes_in_unit <- unique(units_with_codes[[as.character(unit_id)]])
+    code_presence[codes_in_unit, i] <- 1
+  }
+
+  # Calculate Jaccard similarity for each pair
+  for (i in 1:n_codes) {
+    for (j in 1:n_codes) {
+      if (i != j) {
+        intersection <- sum(code_presence[i, ] & code_presence[j, ])
+        union <- sum(code_presence[i, ] | code_presence[j, ])
+
+        jaccard_matrix[i, j] <- if (union > 0) intersection / union else 0
+      }
+    }
+  }
+
+  jaccard_matrix
+}
+
+#' Calculate Phi coefficient matrix for unit-based co-occurrence
+#'
+#' @description
+#' Calculates Phi coefficients based on unit co-occurrence patterns.
+#'
+#' @param codes Character vector of unique codes
+#' @param unit_assignments Data frame from assign_annotations_to_units
+#'
+#' @return Symmetric matrix with Phi coefficients
+#' @keywords internal
+calculate_phi_coefficient_matrix <- function(codes, unit_assignments) {
+  n_codes <- length(codes)
+  phi_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
+                       dimnames = list(codes, codes))
+
+  if (nrow(unit_assignments) == 0) {
+    return(phi_matrix)
+  }
+
+  # Create binary presence matrix: codes x units
+  units_with_codes <- split(unit_assignments$code, unit_assignments$unit_id)
+  all_unit_ids <- unique(unit_assignments$unit_id)
+  n_units <- length(all_unit_ids)
+
+  code_presence <- matrix(0, nrow = n_codes, ncol = n_units,
+                          dimnames = list(codes, as.character(all_unit_ids)))
+
+  for (i in seq_along(all_unit_ids)) {
+    unit_id <- all_unit_ids[i]
+    codes_in_unit <- unique(units_with_codes[[as.character(unit_id)]])
+    code_presence[codes_in_unit, i] <- 1
+  }
+
+  # Calculate Phi coefficient for each pair
+  for (i in 1:n_codes) {
+    for (j in 1:n_codes) {
+      if (i != j) {
+        # 2x2 contingency table
+        n11 <- sum(code_presence[i, ] & code_presence[j, ])  # Both present
+        n10 <- sum(code_presence[i, ] & !code_presence[j, ]) # Only i present
+        n01 <- sum(!code_presence[i, ] & code_presence[j, ]) # Only j present
+        n00 <- sum(!code_presence[i, ] & !code_presence[j, ]) # Neither present
+
+        # Phi coefficient calculation
+        numerator <- (n11 * n00) - (n10 * n01)
+        denominator <- sqrt((n11 + n10) * (n01 + n00) * (n11 + n01) * (n10 + n00))
+
+        phi_matrix[i, j] <- if (denominator > 0) numerator / denominator else 0
+      }
+    }
+  }
+
+  phi_matrix
+}
+
+#' Calculate codes per unit statistics
+#'
+#' @description
+#' Provides summary statistics about code distribution across analytical units.
+#'
+#' @param unit_assignments Data frame from assign_annotations_to_units
+#'
+#' @return List with distribution statistics
+#' @keywords internal
+calculate_codes_per_unit_stats <- function(unit_assignments) {
+  if (nrow(unit_assignments) == 0) {
+    return(list(
+      mean_codes_per_unit = 0,
+      max_codes_per_unit = 0,
+      units_with_multiple_codes = 0
+    ))
+  }
+
+  codes_per_unit <- table(unit_assignments$unit_id)
+
+  list(
+    mean_codes_per_unit = mean(codes_per_unit),
+    max_codes_per_unit = max(codes_per_unit),
+    units_with_multiple_codes = sum(codes_per_unit > 1)
+  )
+}
+
+#' Create empty co-occurrence result structure
+#'
+#' @description
+#' Returns an empty result structure when no valid data is available.
+#'
+#' @param unit Character string specifying the analytical unit
+#' @return List with empty co-occurrence analysis results
+#' @keywords internal
+create_empty_cooccurrence_result <- function(unit) {
+  empty_plot <- function() {
+    plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1),
+         main = "No co-occurrence data available", xlab = "", ylab = "")
+    recordPlot()
+  }
+
+  list(
+    co_occurrence = matrix(0, nrow = 0, ncol = 0),
+    jaccard_similarity = matrix(0, nrow = 0, ncol = 0),
+    phi_coefficient = matrix(0, nrow = 0, ncol = 0),
+    network_plot = empty_plot(),
+    heatmap_plot = empty_plot(),
+    summary = list(
+      total_codes = 0,
+      max_co_occurrence = 0,
+      max_jaccard = 0,
+      mean_jaccard = 0,
+      significant_pairs = 0
+    ),
+    unit_info = list(
+      analytical_unit = unit,
+      total_units = 0,
+      codes_per_unit = list(
+        mean_codes_per_unit = 0,
+        max_codes_per_unit = 0,
+        units_with_multiple_codes = 0
+      )
+    )
+  )
 }
 
 #' Generate word cloud visualization
@@ -3890,35 +4823,27 @@ process_comparison_file <- function(filepath) {
   return(df)
 }
 
-#' Compare coding patterns between different documents or coders
+#' Updated comparison analysis to use unit-based methodology
 #'
 #' @description
-#' Performs a comprehensive comparison of coding patterns between different sets of
-#' annotations, analyzing differences in coverage, code application, overlaps, and
-#' code sequences.
+#' Performs comparison analysis using the updated unit-based co-occurrence methodology.
 #'
-#' @param annotations_list A list of data frames, where each data frame contains
-#'        annotations with columns:
-#'   \itemize{
-#'     \item start: numeric, starting position of annotation
-#'     \item end: numeric, ending position of annotation
-#'     \item code: character, code applied to the annotation
-#'   }
+#' @param annotations_list List of annotation data frames to compare
+#' @param unit Character string specifying analytical unit
+#' @param texts Optional list of text strings corresponding to annotations
 #'
-#' @return A list containing comparison results and analysis:
-#'   \itemize{
-#'     \item coding_strategies: list of analyzed coding patterns for each input
-#'     \item comparison: list of comparative analyses between coding patterns
-#'   }
-#'
+#' @return Updated comparison analysis results
 #' @keywords internal
-generate_comparison_analysis <- function(annotations_list) {
+generate_comparison_analysis <- function(annotations_list, unit = "paragraph", texts = NULL) {
   if (!is.list(annotations_list) || length(annotations_list) < 2) {
     stop("Need at least two annotation sets for comparison")
   }
 
-  # Process each annotation set with error handling
-  coding_strategies <- lapply(annotations_list, function(annotations) {
+  # Process each annotation set with unit-based methodology
+  coding_strategies <- lapply(seq_along(annotations_list), function(i) {
+    annotations <- annotations_list[[i]]
+    text <- if (!is.null(texts) && length(texts) >= i) texts[[i]] else NULL
+
     tryCatch({
       if (!is.data.frame(annotations)) {
         stop("Invalid data format: input must be a data frame")
@@ -3948,79 +4873,124 @@ generate_comparison_analysis <- function(annotations_list) {
 
       annotations <- annotations[valid_rows, ]
 
-      # Calculate coverage statistics with error handling
-      coverage <- tryCatch({
-        list(
-          distribution = list(
-            frequencies = table(annotations$code)
-          )
-        )
-      }, error = function(e) {
-        list(distribution = list(frequencies = table(character(0))))
-      })
+      # Calculate coverage statistics with unit-based methodology
+      coverage <- analyze_coverage(annotations, unit, text)
 
-      # Calculate co-occurrence statistics with error handling
-      co_occurrences <- tryCatch({
-        list(
-          combinations = list(
-            frequencies = calculate_co_occurrences(annotations)
-          )
+      # Calculate co-occurrence statistics with unit-based methodology
+      co_occurrences <- list(
+        combinations = list(
+          frequencies = calculate_co_occurrences(annotations, unit, text)
         )
-      }, error = function(e) {
-        list(combinations = list(frequencies = table(character(0))))
-      })
+      )
 
-      # Calculate sequence statistics with error handling
-      sequences <- tryCatch({
-        list(
-          transitions = calculate_transitions(annotations[order(annotations$start), ])
-        )
-      }, error = function(e) {
-        list(transitions = list())
-      })
+      # Calculate sequence statistics with unit-based methodology
+      sequences <- list(
+        transitions = calculate_transitions(annotations, unit, text)
+      )
 
       return(list(
         coverage = coverage,
         co_occurrences = co_occurrences,
-        sequences = sequences
+        sequences = sequences,
+        unit_info = list(
+          analytical_unit = unit,
+          total_annotations = nrow(annotations),
+          unique_codes = length(unique(annotations$code))
+        )
       ))
     }, error = function(e) {
       # Return empty results if processing fails
       list(
-        coverage = list(distribution = list(frequencies = table(character(0)))),
+        coverage = list(
+          distribution = list(frequencies = table(character(0))),
+          density = list(overall_density = 0)
+        ),
         co_occurrences = list(combinations = list(frequencies = table(character(0)))),
-        sequences = list(transitions = list())
+        sequences = list(transitions = list()),
+        unit_info = list(
+          analytical_unit = unit,
+          total_annotations = 0,
+          unique_codes = 0
+        )
       )
     })
   })
 
-  # Calculate comparison metrics with error handling
+  # Calculate comparison metrics
   comparison <- tryCatch({
     list(
       coverage_differences = compare_coverage(coding_strategies),
       code_differences = compare_codes(coding_strategies),
-      overlap_differences = compare_overlaps(coding_strategies)
+      overlap_differences = compare_overlaps(coding_strategies),
+      unit_comparison = compare_unit_usage(coding_strategies)
     )
   }, error = function(e) {
     list(
       coverage_differences = "Error calculating differences",
       code_differences = "Error comparing codes",
-      overlap_differences = "Error analyzing overlaps"
+      overlap_differences = "Error analyzing overlaps",
+      unit_comparison = "Error comparing unit usage"
     )
   })
 
   return(list(
     coding_strategies = coding_strategies,
-    comparison = comparison
+    comparison = comparison,
+    analysis_settings = list(
+      analytical_unit = unit,
+      methodology = "unit-based"
+    )
   ))
 }
 
-#' Calculate code co-occurrences in annotations
+#' Compare unit usage patterns between coders
+#'
+#' @description
+#' Analyzes how different coders utilize analytical units in their coding patterns.
+#'
+#' @param coding_strategies List of coding strategies with unit information
+#'
+#' @return List containing unit usage comparison metrics
+#' @keywords internal
+compare_unit_usage <- function(coding_strategies) {
+  tryCatch({
+    unit_stats <- lapply(coding_strategies, function(strategy) {
+      if (!is.null(strategy$unit_info)) {
+        strategy$unit_info
+      } else {
+        list(total_annotations = 0, unique_codes = 0)
+      }
+    })
+
+    total_annotations <- sapply(unit_stats, function(x) x$total_annotations %||% 0)
+    unique_codes <- sapply(unit_stats, function(x) x$unique_codes %||% 0)
+
+    list(
+      annotation_range = range(total_annotations),
+      code_range = range(unique_codes),
+      annotation_variation = diff(range(total_annotations)),
+      summary = sprintf(
+        "Annotations per coder: %d - %d; Unique codes per coder: %d - %d",
+        min(total_annotations), max(total_annotations),
+        min(unique_codes), max(unique_codes)
+      )
+    )
+  }, error = function(e) {
+    list(
+      annotation_range = c(0, 0),
+      code_range = c(0, 0),
+      annotation_variation = 0,
+      summary = "Unable to compare unit usage"
+    )
+  })
+}
+
+#' Calculate code co-occurrences using unit-based analysis
 #'
 #' @description
 #' Analyzes text annotations to identify and count instances where different codes
-#' overlap or co-occur in the same text regions. Handles edge cases and provides
-#' error-safe operation.
+#' appear together within the same analytical unit (sentence, paragraph, or document).
+#' This replaces the character-overlap approach with the standard unit-based methodology.
 #'
 #' @param annotations Data frame containing annotations with columns:
 #'   \itemize{
@@ -4028,35 +4998,51 @@ generate_comparison_analysis <- function(annotations_list) {
 #'     \item end: numeric, ending position of annotation
 #'     \item code: character, code identifier
 #'   }
+#' @param unit Character string specifying analytical unit: "sentence", "paragraph", or "document"
+#' @param text Optional character string containing the original text for accurate unit parsing
 #'
 #' @return Table object containing frequencies of code pairs that co-occur,
 #'         with code pair names as "code1 & code2"
 #'
 #' @details
-#' Co-occurrences are identified by finding overlapping text regions between
-#' different code annotations. The function sorts annotations by position and
-#' checks for overlaps between each pair of annotations.
+#' Co-occurrences are identified by finding codes that appear within the same
+#' analytical unit. The function parses text into units and maps annotations
+#' to those units, then counts co-occurrence patterns.
 #'
 #' @keywords internal
-calculate_co_occurrences <- function(annotations) {
+calculate_co_occurrences <- function(annotations, unit = "paragraph", text = NULL) {
   if (!is.data.frame(annotations) || nrow(annotations) <= 1) {
     return(table(character(0)))
   }
 
   tryCatch({
+    # Parse text into units if available
+    if (!is.null(text) && nchar(text) > 0) {
+      text_units <- parse_text_into_units(text, unit)
+      unit_assignments <- assign_annotations_to_units(annotations, text_units)
+    } else {
+      # Fallback to position-based units
+      unit_assignments <- assign_annotations_to_position_units(annotations, unit)
+    }
+
+    if (nrow(unit_assignments) == 0) {
+      return(table(character(0)))
+    }
+
+    # Find co-occurring code pairs within each unit
     co_occurrences <- c()
+    units_with_codes <- split(unit_assignments$code, unit_assignments$unit_id)
 
-    # Sort annotations by start position
-    annotations <- annotations[order(annotations$start), ]
+    for (unit_codes in units_with_codes) {
+      unique_codes_in_unit <- unique(unit_codes)
 
-    # Find overlapping annotations
-    for (i in 1:(nrow(annotations)-1)) {
-      for (j in (i+1):nrow(annotations)) {
-        if (annotations$start[j] <= annotations$end[i]) {
-          pair <- sort(c(annotations$code[i], annotations$code[j]))
-          co_occurrences <- c(co_occurrences, paste(pair, collapse=" & "))
-        } else {
-          break  # No more overlaps possible with current i
+      if (length(unique_codes_in_unit) > 1) {
+        # Generate all unique pairs of codes in this unit
+        for (i in 1:(length(unique_codes_in_unit) - 1)) {
+          for (j in (i + 1):length(unique_codes_in_unit)) {
+            pair <- sort(c(unique_codes_in_unit[i], unique_codes_in_unit[j]))
+            co_occurrences <- c(co_occurrences, paste(pair, collapse = " & "))
+          }
         }
       }
     }
@@ -4067,12 +5053,11 @@ calculate_co_occurrences <- function(annotations) {
   })
 }
 
-#' Calculate transitions between consecutive codes
+#' Calculate transitions between consecutive codes (updated)
 #'
 #' @description
 #' Analyzes the sequence of code applications to identify transitions between
-#' consecutive codes in the text. Creates a list of code pairs representing
-#' each transition from one code to another.
+#' consecutive codes based on analytical units rather than strict position.
 #'
 #' @param annotations Data frame containing annotations with columns:
 #'   \itemize{
@@ -4080,6 +5065,8 @@ calculate_co_occurrences <- function(annotations) {
 #'     \item end: numeric, ending position of annotation
 #'     \item code: character, code identifier
 #'   }
+#' @param unit Character string specifying analytical unit for transition analysis
+#' @param text Optional character string for accurate unit parsing
 #'
 #' @return List where each element is a named vector containing:
 #'   \itemize{
@@ -4088,27 +5075,51 @@ calculate_co_occurrences <- function(annotations) {
 #'   }
 #'
 #' @details
-#' Transitions are identified by sorting annotations by position and then
-#' analyzing consecutive pairs of codes. The function handles edge cases
-#' and provides error-safe operation.
+#' Transitions are identified by analyzing the sequence of analytical units
+#' and tracking code changes between adjacent units.
 #'
 #' @keywords internal
-calculate_transitions <- function(annotations) {
+calculate_transitions <- function(annotations, unit = "paragraph", text = NULL) {
   if (!is.data.frame(annotations) || nrow(annotations) <= 1) {
     return(list())
   }
 
   tryCatch({
-    # Sort annotations by start position
-    annotations <- annotations[order(annotations$start), ]
+    # Parse text into units if available
+    if (!is.null(text) && nchar(text) > 0) {
+      text_units <- parse_text_into_units(text, unit)
+      unit_assignments <- assign_annotations_to_units(annotations, text_units)
+    } else {
+      # Fallback to position-based units
+      unit_assignments <- assign_annotations_to_position_units(annotations, unit)
+    }
 
-    # Create transitions list
-    transitions <- vector("list", nrow(annotations) - 1)
-    for (i in 1:(nrow(annotations)-1)) {
-      transitions[[i]] <- c(
-        from = annotations$code[i],
-        to = annotations$code[i+1]
-      )
+    if (nrow(unit_assignments) == 0) {
+      return(list())
+    }
+
+    # Get dominant code for each unit (most frequent code in unit)
+    unit_codes <- tapply(unit_assignments$code, unit_assignments$unit_id, function(codes) {
+      code_freq <- table(codes)
+      names(code_freq)[which.max(code_freq)]
+    })
+
+    # Sort units by ID to get proper sequence
+    sorted_units <- sort(as.numeric(names(unit_codes)))
+    unit_sequence <- unit_codes[as.character(sorted_units)]
+
+    # Create transitions between consecutive units
+    transitions <- list()
+    for (i in 1:(length(unit_sequence) - 1)) {
+      from_code <- unit_sequence[i]
+      to_code <- unit_sequence[i + 1]
+
+      if (!is.na(from_code) && !is.na(to_code) && from_code != to_code) {
+        transitions[[length(transitions) + 1]] <- c(
+          from = from_code,
+          to = to_code
+        )
+      }
     }
 
     return(transitions)
@@ -4205,28 +5216,25 @@ compare_overlaps <- function(coding_strategies) {
 }
 
 
-#' Analyze coverage patterns in annotations
+#' Analyze coverage patterns with unit-based methodology
 #'
 #' @description
-#' Analyzes how codes are distributed throughout the text, including clustering
-#' patterns and coding density.
+#' Analyzes how codes are distributed throughout the text using analytical units
+#' rather than character-level analysis.
 #'
-#' @param annotations Data frame containing text annotations with columns:
-#'   \itemize{
-#'     \item start: numeric, starting position of annotation
-#'     \item end: numeric, ending position of annotation
-#'     \item code: character, code applied to the annotation
-#'   }
+#' @param annotations Data frame containing text annotations
+#' @param unit Character string specifying analytical unit
+#' @param text Optional character string for accurate unit parsing
 #'
 #' @return List containing:
 #'   \itemize{
-#'     \item clusters: List of annotation clusters
+#'     \item clusters: List of annotation clusters based on units
 #'     \item density: List containing overall density metrics
-#'     \item distribution: List containing code frequencies and positions
+#'     \item distribution: List containing code frequencies and unit positions
 #'   }
 #'
 #' @keywords internal
-analyze_coverage <- function(annotations) {
+analyze_coverage <- function(annotations, unit = "paragraph", text = NULL) {
   if (!is.data.frame(annotations) || nrow(annotations) == 0) {
     return(list(
       clusters = list(),
@@ -4261,32 +5269,78 @@ analyze_coverage <- function(annotations) {
     ))
   }
 
-  # Sort annotations by position
-  sorted_anns <- annotations[order(annotations$start), ]
+  # Parse into analytical units
+  if (!is.null(text) && nchar(text) > 0) {
+    text_units <- parse_text_into_units(text, unit)
+    unit_assignments <- assign_annotations_to_units(annotations, text_units)
+  } else {
+    unit_assignments <- assign_annotations_to_position_units(annotations, unit)
+  }
 
   # Calculate code frequencies
-  code_freq <- table(sorted_anns$code)
+  code_freq <- table(annotations$code)
 
-  # Calculate code positions with error handling
-  code_pos <- tryCatch({
-    tapply(sorted_anns$start, sorted_anns$code, function(x) list(positions = x))
-  }, error = function(e) {
-    list()
-  })
+  # Calculate unit-based density
+  total_units <- length(unique(unit_assignments$unit_id))
+  coded_units <- length(unique(unit_assignments$unit_id))
+  density <- if (total_units > 0) coded_units / total_units else 0
 
-  # Calculate density with error handling
-  total_length <- max(sorted_anns$end) - min(sorted_anns$start)
-  total_coded <- sum(sorted_anns$end - sorted_anns$start + 1)
-  density <- if (total_length > 0) total_coded / total_length else 0
+  # Calculate code positions by unit
+  code_pos <- tapply(unit_assignments$unit_id, unit_assignments$code,
+                     function(x) list(unit_positions = unique(x)))
 
   return(list(
-    clusters = find_annotation_clusters(sorted_anns),
+    clusters = find_unit_clusters(unit_assignments),
     density = list(overall_density = density),
     distribution = list(
       frequencies = code_freq,
       positions = code_pos
     )
   ))
+}
+
+#' Find clusters of annotations based on analytical units
+#'
+#' @description
+#' Identifies clusters of annotations that appear in adjacent or nearby analytical units.
+#'
+#' @param unit_assignments Data frame from assign_annotations_to_units
+#'
+#' @return List of unit-based clusters
+#' @keywords internal
+find_unit_clusters <- function(unit_assignments) {
+  if (nrow(unit_assignments) == 0) {
+    return(list())
+  }
+
+  # Group by unit and find consecutive unit sequences
+  units_with_codes <- unique(unit_assignments$unit_id)
+  sorted_units <- sort(units_with_codes)
+
+  clusters <- list()
+  current_cluster <- c()
+
+  for (i in seq_along(sorted_units)) {
+    if (length(current_cluster) == 0) {
+      current_cluster <- sorted_units[i]
+    } else if (sorted_units[i] == max(current_cluster) + 1) {
+      # Consecutive unit
+      current_cluster <- c(current_cluster, sorted_units[i])
+    } else {
+      # Gap found, save current cluster if it has multiple units
+      if (length(current_cluster) > 1) {
+        clusters[[length(clusters) + 1]] <- current_cluster
+      }
+      current_cluster <- sorted_units[i]
+    }
+  }
+
+  # Add final cluster
+  if (length(current_cluster) > 1) {
+    clusters[[length(clusters) + 1]] <- current_cluster
+  }
+
+  return(clusters)
 }
 
 #' Analyze code application patterns
@@ -4991,12 +6045,13 @@ import_hierarchy <- function(json_string) {
 #'
 #' @description
 #' Creates an HTML tree visualization of the code hierarchy with proper
-#' indentation, icons, and interactive elements.
+#' indentation, icons, and interactive elements. Now properly displays codes
+#' under the root node.
 #'
 #' @param node Root node of hierarchy tree with attributes:
 #'   \itemize{
 #'     \item name: character, node name
-#'     \item type: character, "theme" or "code"
+#'     \item type: character, "root", "theme" or "code"
 #'     \item description: character, node description
 #'     \item children: list of child nodes
 #'   }
@@ -5009,15 +6064,27 @@ visualize_hierarchy <- function(node) {
   print_tree <- function(node, indent = 0) {
     if (is.null(node)) return(character(0))
 
-    # Special handling for root node vs theme vs code
-    if (node$type == "root") {
-      symbol <- "\U0001F4C1"  # Closed folder emoji: 📁 for root
-      class_name <- "root-item"
-    } else if (node$type == "theme") {
-      symbol <- "\U0001F4C2"  # Open folder emoji: 📂 for themes
-      class_name <- "theme-item"
+    # Determine node type with fallback
+    node_type <- if (!is.null(node$type) && is.character(node$type)) {
+      node$type
+    } else if (!is.null(node$name) && node$name == "Root") {
+      "root"
     } else {
-      symbol <- "\U0001F4C4"  # File emoji: 📄 for codes
+      "unknown"
+    }
+
+    # Special handling for root node vs theme vs code
+    if (node_type == "root") {
+      symbol <- "\U0001F4C1"  # Closed folder emoji: folder for root
+      class_name <- "root-item"
+    } else if (node_type == "theme") {
+      symbol <- "\U0001F4C2"  # Open folder emoji: folder for themes
+      class_name <- "theme-item"
+    } else if (node_type == "code") {
+      symbol <- "\U0001F4C4"  # File emoji: file for codes
+      class_name <- "code-item"
+    } else {
+      symbol <- "\U0001F4C4"  # Default to file emoji for unknown types
       class_name <- "code-item"
     }
 
@@ -5026,7 +6093,8 @@ visualize_hierarchy <- function(node) {
       sprintf('<span class="%s" data-name="%s" data-type="%s">%s</span>',
               class_name, node$name, node$type, node$name)
     } else {
-      sprintf('<span>%s</span>', node$name)
+      sprintf('<span class="%s" data-name="%s" data-type="root">%s</span>',
+              class_name, node$name, node$name)
     }
 
     # Add description preview if available
@@ -5049,7 +6117,20 @@ visualize_hierarchy <- function(node) {
 
     # Add all children's lines
     if (!is.null(node$children) && length(node$children) > 0) {
-      sorted_children <- sort(names(node$children))
+      # Sort children: themes first, then codes
+      child_names <- names(node$children)
+      child_types <- sapply(child_names, function(name) {
+        child <- node$children[[name]]
+        if (!is.null(child$type)) child$type else "unknown"
+      })
+
+      # Sort so themes come first, then codes alphabetically within each type
+      theme_children <- child_names[child_types == "theme"]
+      code_children <- child_names[child_types == "code"]
+      other_children <- child_names[!child_types %in% c("theme", "code")]
+
+      sorted_children <- c(sort(theme_children), sort(code_children), sort(other_children))
+
       child_lines <- lapply(sorted_children, function(child_name) {
         print_tree(node$children[[child_name]], indent + 1)
       })
@@ -5112,15 +6193,16 @@ find_node_by_name <- function(node, target_name) {
 #' @description
 #' Calculates various statistics about the code hierarchy including the total number
 #' of themes and codes, maximum depth, and distribution of codes across themes.
+#' Now includes codes directly under the root node.
 #'
 #' @param node Root node of the hierarchy tree
 #'
 #' @return A list containing hierarchy statistics:
 #'   \itemize{
 #'     \item total_themes: Total number of themes in the hierarchy
-#'     \item total_codes: Total number of codes in the hierarchy
+#'     \item total_codes: Total number of codes in the hierarchy (including those under root)
 #'     \item max_depth: Maximum depth of the hierarchy tree
-#'     \item codes_per_theme: List showing number of codes in each theme
+#'     \item codes_per_theme: List showing number of codes in each theme/root
 #'     \item average_codes_per_theme: Average number of codes per theme
 #'   }
 #'
@@ -5147,34 +6229,40 @@ calculate_hierarchy_stats <- function(node) {
     # Check if node type exists and is a character
     node_type <- if (!is.null(node$type) && is.character(node$type)) node$type else "unknown"
 
-    # Only count as theme if it's explicitly a theme (not root)
+    # Count themes (not including root)
     if (node_type == "theme") {
       n_themes <<- n_themes + 1
-      # Count codes that are direct children of this theme
-      if (!is.null(node$name) && !is.null(node$children)) {
-        # Safely get children as a list
-        children <- if (inherits(node$children, "Node")) {
-          list(node$children)
-        } else if (is.list(node$children)) {
-          node$children
-        } else {
-          list()
-        }
+    }
 
-        codes_in_theme <- sum(vapply(children, function(x) {
-          child_type <- if (!is.null(x$type) && is.character(x$type)) x$type else "unknown"
-          child_type == "code"
-        }, logical(1)))
-
-        if (codes_in_theme > 0) {
-          codes_per_theme[[node$name]] <<- codes_in_theme
-        }
-      }
-    } else if (node_type == "code") {
+    # Count codes regardless of where they are
+    if (node_type == "code") {
       n_codes <<- n_codes + 1
     }
 
     max_depth <<- max(max_depth, depth)
+
+    # Count codes that are direct children of this node (including root)
+    if (!is.null(node$name) && !is.null(node$children)) {
+      # Safely get children as a list
+      children <- if (inherits(node$children, "Node")) {
+        list(node$children)
+      } else if (is.list(node$children)) {
+        node$children
+      } else {
+        list()
+      }
+
+      codes_in_node <- sum(vapply(children, function(x) {
+        child_type <- if (!is.null(x$type) && is.character(x$type)) x$type else "unknown"
+        child_type == "code"
+      }, logical(1)))
+
+      if (codes_in_node > 0) {
+        # Use "Root" for the root node display, otherwise use the node name
+        display_name <- if (node_type == "root" || node$name == "Root") "Root" else node$name
+        codes_per_theme[[display_name]] <<- codes_in_node
+      }
+    }
 
     # Safely traverse children
     if (!is.null(node$children)) {
@@ -5195,8 +6283,10 @@ calculate_hierarchy_stats <- function(node) {
   # Start traversal from root node
   traverse_node(node)
 
-  # Calculate average codes per theme - handle division by zero
-  avg_codes <- if (n_themes > 0) n_codes / n_themes else 0
+  # Calculate average codes per theme/location - handle division by zero
+  # Include root in the count if it has codes
+  total_locations <- n_themes + (if(length(codes_per_theme[["Root"]]) > 0) 1 else 0)
+  avg_codes <- if (total_locations > 0) n_codes / total_locations else 0
 
   # Return statistics
   list(
@@ -6122,3 +7212,409 @@ $(document).ready(function() {
   });
 });
 "
+
+# Add helper function to check if code exists in hierarchy
+code_exists_in_hierarchy <- function(node, code_name) {
+  if (is.null(node) || is.null(code_name)) return(FALSE)
+
+  # Check if this node is the code we're looking for
+  if (!is.null(node$name) && node$name == code_name &&
+      !is.null(node$type) && node$type == "code") {
+    return(TRUE)
+  }
+
+  # Recursively check children
+  if (!is.null(node$children)) {
+    for (child in node$children) {
+      if (code_exists_in_hierarchy(child, code_name)) {
+        return(TRUE)
+      }
+    }
+  }
+
+  return(FALSE)
+}
+
+#' Sync codes with hierarchy
+#'
+#' @description
+#' Ensures all codes in rv$codes are represented in the code hierarchy.
+#' Adds any missing codes to the root node automatically.
+#'
+#' @param rv ReactiveValues object containing codes and code_tree
+#' @return Updated rv object
+#' @keywords internal
+sync_codes_with_hierarchy <- function(rv) {
+  if (is.null(rv$codes) || length(rv$codes) == 0) {
+    return(rv)
+  }
+
+  # Get all codes currently in the hierarchy
+  hierarchy_codes <- get_all_codes_in_hierarchy(rv$code_tree)
+
+  # Find codes that are not in the hierarchy
+  missing_codes <- setdiff(rv$codes, hierarchy_codes)
+
+  # Add missing codes to root
+  for (code in missing_codes) {
+    if (!is.null(code) && nchar(code) > 0) {
+      new_code_node <- rv$code_tree$AddChild(code)
+      new_code_node$type <- "code"
+      new_code_node$description <- ""
+      new_code_node$created <- Sys.time()
+    }
+  }
+
+  return(rv)
+}
+
+#' Get all codes in hierarchy
+#'
+#' @description
+#' Recursively extracts all code names from the hierarchy tree.
+#'
+#' @param node Root node of the hierarchy tree
+#' @return Character vector of all codes in the hierarchy
+#' @keywords internal
+get_all_codes_in_hierarchy <- function(node) {
+  if (is.null(node)) return(character(0))
+
+  codes <- character(0)
+
+  traverse_node <- function(node) {
+    if (is.null(node)) return()
+
+    # If this node is a code, add it to our list
+    if (!is.null(node$type) && node$type == "code" && !is.null(node$name)) {
+      codes <<- c(codes, node$name)
+    }
+
+    # Traverse children
+    if (!is.null(node$children) && length(node$children) > 0) {
+      for (child in node$children) {
+        traverse_node(child)
+      }
+    }
+  }
+
+  traverse_node(node)
+  return(unique(codes))
+}
+
+# Add helper functions for better visualization generation:
+
+#' Generate network visualization for unit-based co-occurrence
+#'
+#' @description
+#' Creates network plot showing code relationships based on unit co-occurrence
+#'
+#' @param co_matrix Co-occurrence count matrix
+#' @param jaccard_matrix Jaccard similarity matrix
+#' @param phi_matrix Phi coefficient matrix
+#' @param codes Character vector of code names
+#'
+#' @return Recorded plot object
+#' @keywords internal
+generate_network_visualization <- function(co_matrix, jaccard_matrix, phi_matrix, codes) {
+  # Save current par settings and restore on exit
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+
+  n_codes <- length(codes)
+
+  if (n_codes <= 1) {
+    plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1),
+         main = if(n_codes == 0) "No codes available" else "Only one code present")
+    if (n_codes == 1) {
+      points(0.5, 0.5, pch = 16, col = "red", cex = 2)
+      text(0.5, 0.5, labels = codes[1], pos = 3, offset = 0.5)
+    }
+    return(recordPlot())
+  }
+
+  # Calculate node positions using circular layout
+  angles <- seq(0, 2 * pi, length.out = n_codes + 1)[-1]
+  x <- 0.5 + 0.4 * cos(angles)
+  y <- 0.5 + 0.4 * sin(angles)
+
+  # Set up plot
+  par(mar = c(1, 1, 3, 1))
+  plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1),
+       main = "Code Co-occurrence Network\n(Unit-based Analysis)")
+
+  # Draw edges based on co-occurrence strength
+  for (i in 1:n_codes) {
+    for (j in 1:n_codes) {
+      if (i < j && co_matrix[i, j] > 0) {
+        # Scale line width based on co-occurrence count (normalized)
+        max_cooccur <- max(co_matrix)
+        lwd <- 1 + 4 * (co_matrix[i, j] / max_cooccur)
+
+        # Scale opacity based on Jaccard similarity
+        alpha <- 0.3 + 0.7 * jaccard_matrix[i, j]
+
+        lines(c(x[i], x[j]), c(y[i], y[j]),
+              lwd = lwd,
+              col = rgb(0, 0, 1, alpha = alpha))
+      }
+    }
+  }
+
+  # Calculate node sizes based on total co-occurrences
+  node_totals <- rowSums(co_matrix) + colSums(co_matrix)
+  if (max(node_totals) > 0) {
+    node_sizes <- 1 + 2 * (node_totals / max(node_totals))
+  } else {
+    node_sizes <- rep(2, n_codes)
+  }
+
+  # Draw nodes and labels
+  points(x, y, pch = 16, col = "red", cex = node_sizes)
+  text(x, y, labels = codes, pos = 3, offset = 0.5, cex = 0.8)
+
+  return(recordPlot())
+}
+
+#' Generate heatmap visualization for unit-based co-occurrence
+#'
+#' @description
+#' Creates heatmap showing Jaccard similarity coefficients between codes
+#'
+#' @param jaccard_matrix Jaccard similarity matrix
+#' @param codes Character vector of code names
+#'
+#' @return Recorded plot object
+#' @keywords internal
+generate_heatmap_visualization <- function(jaccard_matrix, codes) {
+  # Save current par settings and restore on exit
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+
+  n_codes <- length(codes)
+
+  if (n_codes == 0) {
+    plot(1, type = "n", xlab = "", ylab = "",
+         main = "No codes available for heatmap")
+    return(recordPlot())
+  }
+
+  # Set up the plotting area
+  par(mar = c(8, 8, 3, 2))
+
+  # Create the heatmap
+  image(1:n_codes, 1:n_codes, jaccard_matrix,
+        main = "Code Co-occurrence Heatmap\n(Jaccard Similarity Coefficients)",
+        xlab = "", ylab = "",
+        axes = FALSE,
+        col = colorRampPalette(c("white", "navy"))(100))
+
+  # Add axes with code labels
+  axis(1, 1:n_codes, codes, las = 2, cex.axis = 0.8)
+  axis(2, 1:n_codes, codes, las = 2, cex.axis = 0.8)
+
+  # Add value labels in cells for small matrices
+  if (n_codes <= 8) {
+    for (i in 1:n_codes) {
+      for (j in 1:n_codes) {
+        if (jaccard_matrix[i, j] > 0) {
+          text(j, i, sprintf("%.2f", jaccard_matrix[i, j]),
+               cex = 0.7, col = if(jaccard_matrix[i, j] > 0.5) "white" else "black")
+        }
+      }
+    }
+  }
+
+  return(recordPlot())
+}
+
+#' Sync codes with hierarchy
+#'
+#' @description
+#' Ensures all codes in rv$codes are represented in the code hierarchy.
+#' Adds any missing codes to the root node automatically.
+#'
+#' @param rv ReactiveValues object containing codes and code_tree
+#' @return Updated rv object
+#' @keywords internal
+sync_codes_with_hierarchy <- function(rv) {
+  if (is.null(rv$codes) || length(rv$codes) == 0) {
+    return(rv)
+  }
+
+  # Get all codes currently in the hierarchy
+  hierarchy_codes <- get_all_codes_in_hierarchy(rv$code_tree)
+
+  # Find codes that are not in the hierarchy
+  missing_codes <- setdiff(rv$codes, hierarchy_codes)
+
+  # Add missing codes to root
+  for (code in missing_codes) {
+    if (!is.null(code) && nchar(code) > 0) {
+      new_code_node <- rv$code_tree$AddChild(code)
+      new_code_node$type <- "code"
+      new_code_node$description <- ""
+      new_code_node$created <- Sys.time()
+    }
+  }
+
+  return(rv)
+}
+
+#' Get all codes in hierarchy
+#'
+#' @description
+#' Recursively extracts all code names from the hierarchy tree.
+#'
+#' @param node Root node of the hierarchy tree
+#' @return Character vector of all codes in the hierarchy
+#' @keywords internal
+get_all_codes_in_hierarchy <- function(node) {
+  if (is.null(node)) return(character(0))
+
+  codes <- character(0)
+
+  traverse_node <- function(node) {
+    if (is.null(node)) return()
+
+    # If this node is a code, add it to our list
+    if (!is.null(node$type) && node$type == "code" && !is.null(node$name)) {
+      codes <<- c(codes, node$name)
+    }
+
+    # Traverse children
+    if (!is.null(node$children) && length(node$children) > 0) {
+      for (child in node$children) {
+        traverse_node(child)
+      }
+    }
+  }
+
+  traverse_node(node)
+  return(unique(codes))
+}
+
+# Add helper functions for better visualization generation:
+
+#' Generate network visualization for unit-based co-occurrence
+#'
+#' @description
+#' Creates network plot showing code relationships based on unit co-occurrence
+#'
+#' @param co_matrix Co-occurrence count matrix
+#' @param jaccard_matrix Jaccard similarity matrix
+#' @param phi_matrix Phi coefficient matrix
+#' @param codes Character vector of code names
+#'
+#' @return Recorded plot object
+#' @keywords internal
+generate_network_visualization <- function(co_matrix, jaccard_matrix, phi_matrix, codes) {
+  # Save current par settings and restore on exit
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+
+  n_codes <- length(codes)
+
+  if (n_codes <= 1) {
+    plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1),
+         main = if(n_codes == 0) "No codes available" else "Only one code present")
+    if (n_codes == 1) {
+      points(0.5, 0.5, pch = 16, col = "red", cex = 2)
+      text(0.5, 0.5, labels = codes[1], pos = 3, offset = 0.5)
+    }
+    return(recordPlot())
+  }
+
+  # Calculate node positions using circular layout
+  angles <- seq(0, 2 * pi, length.out = n_codes + 1)[-1]
+  x <- 0.5 + 0.4 * cos(angles)
+  y <- 0.5 + 0.4 * sin(angles)
+
+  # Set up plot
+  par(mar = c(1, 1, 3, 1))
+  plot(1, type = "n", xlab = "", ylab = "", xlim = c(0, 1), ylim = c(0, 1),
+       main = "Code Co-occurrence Network\n(Unit-based Analysis)")
+
+  # Draw edges based on co-occurrence strength
+  for (i in 1:n_codes) {
+    for (j in 1:n_codes) {
+      if (i < j && co_matrix[i, j] > 0) {
+        # Scale line width based on co-occurrence count (normalized)
+        max_cooccur <- max(co_matrix)
+        lwd <- 1 + 4 * (co_matrix[i, j] / max_cooccur)
+
+        # Scale opacity based on Jaccard similarity
+        alpha <- 0.3 + 0.7 * jaccard_matrix[i, j]
+
+        lines(c(x[i], x[j]), c(y[i], y[j]),
+              lwd = lwd,
+              col = rgb(0, 0, 1, alpha = alpha))
+      }
+    }
+  }
+
+  # Calculate node sizes based on total co-occurrences
+  node_totals <- rowSums(co_matrix) + colSums(co_matrix)
+  if (max(node_totals) > 0) {
+    node_sizes <- 1 + 2 * (node_totals / max(node_totals))
+  } else {
+    node_sizes <- rep(2, n_codes)
+  }
+
+  # Draw nodes and labels
+  points(x, y, pch = 16, col = "red", cex = node_sizes)
+  text(x, y, labels = codes, pos = 3, offset = 0.5, cex = 0.8)
+
+  return(recordPlot())
+}
+
+#' Generate heatmap visualization for unit-based co-occurrence
+#'
+#' @description
+#' Creates heatmap showing Jaccard similarity coefficients between codes
+#'
+#' @param jaccard_matrix Jaccard similarity matrix
+#' @param codes Character vector of code names
+#'
+#' @return Recorded plot object
+#' @keywords internal
+generate_heatmap_visualization <- function(jaccard_matrix, codes) {
+  # Save current par settings and restore on exit
+  oldpar <- par(no.readonly = TRUE)
+  on.exit(par(oldpar))
+
+  n_codes <- length(codes)
+
+  if (n_codes == 0) {
+    plot(1, type = "n", xlab = "", ylab = "",
+         main = "No codes available for heatmap")
+    return(recordPlot())
+  }
+
+  # Set up the plotting area
+  par(mar = c(8, 8, 3, 2))
+
+  # Create the heatmap
+  image(1:n_codes, 1:n_codes, jaccard_matrix,
+        main = "Code Co-occurrence Heatmap\n(Jaccard Similarity Coefficients)",
+        xlab = "", ylab = "",
+        axes = FALSE,
+        col = colorRampPalette(c("white", "navy"))(100))
+
+  # Add axes with code labels
+  axis(1, 1:n_codes, codes, las = 2, cex.axis = 0.8)
+  axis(2, 1:n_codes, codes, las = 2, cex.axis = 0.8)
+
+  # Add value labels in cells for small matrices
+  if (n_codes <= 8) {
+    for (i in 1:n_codes) {
+      for (j in 1:n_codes) {
+        if (jaccard_matrix[i, j] > 0) {
+          text(j, i, sprintf("%.2f", jaccard_matrix[i, j]),
+               cex = 0.7, col = if(jaccard_matrix[i, j] > 0.5) "white" else "black")
+        }
+      }
+    }
+  }
+
+  return(recordPlot())
+}
