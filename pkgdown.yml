@@ -1,7 +1,7 @@
 pandoc: 3.1.11
-pkgdown: 2.1.2
+pkgdown: 2.1.3
 pkgdown_sha: ~
 articles:
   practical_example: practical_example.html
   technical_integration: technical_integration.html
-last_built: 2025-05-16T03:03Z
+last_built: 2025-06-25T13:06Z
