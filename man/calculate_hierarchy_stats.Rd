@@ -13,14 +13,15 @@ calculate_hierarchy_stats(node)
 A list containing hierarchy statistics:
 \itemize{
 \item total_themes: Total number of themes in the hierarchy
-\item total_codes: Total number of codes in the hierarchy
+\item total_codes: Total number of codes in the hierarchy (including those under root)
 \item max_depth: Maximum depth of the hierarchy tree
-\item codes_per_theme: List showing number of codes in each theme
+\item codes_per_theme: List showing number of codes in each theme/root
 \item average_codes_per_theme: Average number of codes per theme
 }
 }
 \description{
 Calculates various statistics about the code hierarchy including the total number
 of themes and codes, maximum depth, and distribution of codes across themes.
+Now includes codes directly under the root node.
 }
 \keyword{internal}

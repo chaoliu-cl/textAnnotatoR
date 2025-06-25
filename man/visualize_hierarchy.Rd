@@ -10,7 +10,7 @@ visualize_hierarchy(node)
 \item{node}{Root node of hierarchy tree with attributes:
 \itemize{
 \item name: character, node name
-\item type: character, "theme" or "code"
+\item type: character, "root", "theme" or "code"
 \item description: character, node description
 \item children: list of child nodes
 }}
@@ -20,6 +20,7 @@ Character string containing HTML markup for tree visualization
 }
 \description{
 Creates an HTML tree visualization of the code hierarchy with proper
-indentation, icons, and interactive elements.
+indentation, icons, and interactive elements. Now properly displays codes
+under the root node.
 }
 \keyword{internal}

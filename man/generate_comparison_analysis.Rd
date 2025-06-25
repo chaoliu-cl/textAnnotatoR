@@ -2,29 +2,25 @@
 % Please edit documentation in R/annotate_gui.R
 \name{generate_comparison_analysis}
 \alias{generate_comparison_analysis}
-\title{Compare coding patterns between different documents or coders}
+\title{Updated comparison analysis to use unit-based methodology}
 \usage{
-generate_comparison_analysis(annotations_list)
+generate_comparison_analysis(
+  annotations_list,
+  unit = "paragraph",
+  texts = NULL
+)
 }
 \arguments{
-\item{annotations_list}{A list of data frames, where each data frame contains
-annotations with columns:
-\itemize{
-\item start: numeric, starting position of annotation
-\item end: numeric, ending position of annotation
-\item code: character, code applied to the annotation
-}}
+\item{annotations_list}{List of annotation data frames to compare}
+
+\item{unit}{Character string specifying analytical unit}
+
+\item{texts}{Optional list of text strings corresponding to annotations}
 }
 \value{
-A list containing comparison results and analysis:
-\itemize{
-\item coding_strategies: list of analyzed coding patterns for each input
-\item comparison: list of comparative analyses between coding patterns
-}
+Updated comparison analysis results
 }
 \description{
-Performs a comprehensive comparison of coding patterns between different sets of
-annotations, analyzing differences in coverage, code application, overlaps, and
-code sequences.
+Performs comparison analysis using the updated unit-based co-occurrence methodology.
 }
 \keyword{internal}

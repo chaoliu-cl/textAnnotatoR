@@ -37,16 +37,6 @@ test_that("handle_error function works correctly", {
   expect_null(result)
 })
 
-test_that("get_project_dir uses temporary directory", {
-  # Mock init_data_dir to return temp directory
-  temp_dir <- tempdir()
-  mockery::stub(get_project_dir, "init_data_dir", temp_dir)
-
-  dir <- get_project_dir()
-  expect_true(dir.exists(dir))
-  expect_true(grepl(basename(tempdir()), dir))
-})
-
 test_that("save_project_state works with temporary directory", {
   # Create temporary project directory
   project_dir <- file.path(tempdir(), "projects")

@@ -31,26 +31,74 @@ This vignette provides a step-by-step practical example of using the textAnnotat
 1. Set up a project
 2. Import text data
 3. Annotate text
-4. Analyze patterns within coded data
-5. Export results
+4. Manage project files (saving, loading, and organizing)
+5. Analyze patterns within coded data
+6. Export results
 
-# Sample Project: Analyzing Interview Responses
+# Setting Up textAnnotatoR
 
-For this example, we'll be analyzing fictional interview responses about remote work experiences. The example demonstrates how you might use textAnnotatoR in a real qualitative research context.
+Before diving into the sample project, let's understand how to properly set up textAnnotatoR and navigate its interface.
 
-## Step 1: Starting a New Project
+## Installation
 
-First, let's launch the textAnnotatoR interface and create a new project:
+If you haven't installed textAnnotatoR yet, you can install it from GitHub:
+
+```{r eval=FALSE}
+# Install devtools if not already installed
+if (!requireNamespace("devtools", quietly = TRUE)) {
+  install.packages("devtools")
+}
+
+# Install textAnnotatoR
+devtools::install_github("chaoliu-cl/textAnnotatoR")
+```
+
+## First-Time Setup
+
+The first time you run textAnnotatoR, it will ask you to confirm where you want to store your project data:
 
 ```{r eval=FALSE}
 library(textAnnotatoR)
 annotate_gui()
 ```
 
-When the interface loads, click "New Project" in the top toolbar:
+You'll see a dialog asking you to choose between:
+1) Default Location: A folder managed by R in your user directory
+2) Custom Location: A directory of your choice
+
+```{r, out.width = "600px", echo=FALSE}
+knitr::include_graphics("../man/figures/storage_location.png")
+```
+
+If you choose "Custom Location," you'll need to navigate to and select your preferred directory. This directory will store all your textAnnotatoR projects.
+
+## Understanding the Interface
+
+When textAnnotatoR launches, you'll see several tabs:
+
+- **File**: Import text and manage projects
+- **Code and Memo**: For managing codes and adding memos
+- **Themes**: Organize codes into themes and hierarchies
+- **Analysis**: Analyze coding patterns
+- **Records**: View all annotations in tabular format
+- **Comparison**: Compare coding between different coders
+
+# Sample Project: Analyzing Interview Responses
+
+For this example, we'll be analyzing fictional interview responses about remote work experiences. The example demonstrates how you might use textAnnotatoR in a real qualitative research context.
+
+## Step 1: Creating a New Project
+
+When you first launch textAnnotatoR, it automatically creates a blank project. However, if you want to start a new project, click "New Project" in the top toolbar
 
 ```{r, out.width = "700px", echo=FALSE}
 knitr::include_graphics("../man/figures/new_project_creation.png")
+```
+
+If you have unsaved changes in your current project, you'll see a confirmation dialog asking if you want to save your current project first:
+
+```{r, out.width = "550px", echo=FALSE}
+knitr::include_graphics("../man/figures/save_before_new.png")
 ```
 
 ## Step 2: Importing Text Data
@@ -71,19 +119,33 @@ Interviewer: How has remote work affected your work-life balance?
 Participant: It's a double-edged sword. I have more flexibility and time with family, but it's also harder to disconnect. Sometimes I find myself checking emails well into the evening, which wasn't a habit before. I've had to be intentional about setting working hours and sticking to them. Taking short walks during the day has become my substitute for the natural breaks that happened in the office.
 ```
 
-Go to the "File" tab and:
-1. Click "Choose File" to upload your `remote_work_interview.txt` 2. Click "Import Text"
+## Step 3: Saving Your Project
 
-```{r, out.width = "700px", echo=FALSE}
-knitr::include_graphics("../man/figures/import_text.png")
+It's important to save your project regularly. To do that,  click on "Save Project"
+
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("../man/figures/save_project.png")
 ```
 
-## Step 3: Annotating the Text
+Then, a dialog will appear:
+
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("../man/figures/save_project_dialog.png")
+```
+
+   - Type in your project name
+   - Click "Choose Directory" to select where to save the project
+   - Directories are displayed in a hierarchical format - navigate to your desired location
+   - Click "Save" to save your project
+
+The project will be saved as an RDS file, which preserves all your annotations, codes, and project structure.
+
+
+## Step 4: Annotating the Text
 
 Now let's start coding our interview text:
 
-1. Return to the text display area
-2. Click the selection tool (cursor icon) in the right margin
+1. Click the selection tool (cursor icon) in the right margin
 3. Select text discussing the home workspace setup
 4. In the "Code and Memo" tab, enter "Home Setup" as the code
 5. Add a memo: "Initial challenge in transition to remote work"
@@ -96,7 +158,7 @@ knitr::include_graphics("../man/figures/annotate1.png")
 Continue this process for other notable segments in the text. For example:
 
 - Code Zoom, Slack, and Asana as "Technology"
-- Code save two hours daily by not commuting as "Save Time"
+- Code "save two hours daily by not commuting" as "Save Time"
 - Code discussions of missed impromptu conversations as "Social Isolation"
 
 Your annotated text will begin to look like this, with different colored highlights representing different codes:
@@ -105,13 +167,73 @@ Your annotated text will begin to look like this, with different colored highlig
 knitr::include_graphics("../man/figures/annotating_process.png")
 ```
 
-If you want to apply an existing code to the text, first highlight the text and click on "Apply Code", then choose the code you want to apply:
+### Applying Existing Codes
+
+Once you've created some codes, you can apply them to new text segments:
+
+1. Highlight the target text
+2. Click on "Apply Code" in the side panel 
+3. Choose the code you want to apply from the dropdown menu
 
 ```{r, out.width = "700px", echo=FALSE}
 knitr::include_graphics("../man/figures/apply_code.png")
 ```
 
-## Step 4: Analyzing the Coded Data
+### Managing Codes
+
+As your coding progresses, you'll want to manage your codes efficiently. You can click on the highlighted text to:
+
+- Replace code
+- Rename code
+- Delete code
+
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("../man/figures/edit_code.png")
+```
+   
+   
+### Merging Similar Codes
+
+In some instances, you might find that some of your codes are conceptually similar or overlapping. textAnnotatoR provides a "Merge Codes" feature to consolidate these:
+
+1. Go to the "Code and Memo" tab
+2. In the "Codes" section, select two or more codes by checking the boxes next to them
+3. Click the "Merge Codes" button
+4. A dialog will appear asking you to name the new merged code:
+   - Enter a descriptive name that encompasses the concepts being merged
+   - Click "Merge" to confirm
+
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("../man/figures/merge_codes_dialog.png")
+```
+
+This feature is particularly useful when:
+
+- Your initial coding was very granular and you now want broader categories
+- Multiple codes have emerged that represent the same underlying concept
+- You want to simplify your coding scheme for analysis or reporting
+
+## Step 5: Loading Your Project
+
+If you need to continue your work later, you'll need to load your saved project: Click "Load Project".
+
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("../man/figures/load_project.png")
+```
+
+Then a dialog will appear:
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("../man/figures/load_project_dialog.png")
+```
+
+   - Click "Choose Project File" to navigate to your saved project file
+   - Navigate through the directory structure to find your project
+   - Select the RDS file and click "Select"
+   - Click "Load" to load your project
+
+All your text, annotations, codes, and memos will be restored exactly as you left them.
+
+## Step 6: Analyzing the Coded Data
 
 Once you've coded the entire interview, use the analysis tools to examine patterns:
 
@@ -133,9 +255,20 @@ Click "Code Co-occurrence" to see relationships between different codes:
 knitr::include_graphics("../man/figures/co_occurrence.png")
 ```
 
-This visualization might reveal that "Boundary difficulty" and "Family friendly" frequently co-occur, suggesting a relationship between these issues
+This visualization might reveal that "Boundary difficulty" and "Family friendly" frequently co-occur, suggesting a relationship between these issues.
 
-## Optional Step: Creating Themes
+### Text Statistics
+
+The "Analysis" tab also provides basic text statistics:
+
+1. Word count
+2. Character count
+3. Sentence count
+4. Percentage of text that has been coded
+
+These statistics can help you track your coding progress and provide context for your analysis.
+
+## Step 7: Creating Themes
 
 Sometimes multiple codes may share the same underlying theme and you may want to create a theme that encompasses several codes. Let's create a logical hierarchy of themes and codes. Go to the "Themes" tab:
 
@@ -158,9 +291,7 @@ When finished, your code hierarchy should look something like this:
 knitr::include_graphics("../man/figures/code_and_theme_hierarchy.png")
 ```
 
-Continue for other themes with appropriate codes.
-
-## Step 5: Exporting Results
+## Step 8: Exporting Results
 
 ### Saving Annotations
 
@@ -183,7 +314,7 @@ To save the annotated text with all coding highlights:
 2. Select HTML format to preserve color coding
 3. Name your file "annotated_interview.html"
 
-## Step 6: Project Comparison (Two Coders)
+## Step 9: Project Comparison (Two Coders)
 
 If you're working with a team where two researchers code the same text, you can use the comparison tools:
 
@@ -194,13 +325,12 @@ If you're working with a team where two researchers code the same text, you can 
 5. Run the comparison to see inter-coder agreement and differences
 
 ```{r, out.width = "400px", echo=FALSE}
-knitr::include_graphics("../man/figures//comparison_analysis.png")
+knitr::include_graphics("../man/figures/comparison_analysis.png")
 ```
 
 ```{r, out.width = "400px", echo=FALSE}
 knitr::include_graphics("../man/figures/comparison_analysis2.png")
 ```
-
 
 # Getting the Sample Project
 

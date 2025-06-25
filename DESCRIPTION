@@ -11,7 +11,7 @@ Description: A comprehensive text annotation tool built with 'shiny'. Provides a
     comparison of multiple coding sets, and export capabilities. Supports
     collaborative qualitative research through standardized annotation formats
     and analysis tools.
-License: GPL-3
+License: GPL-3 + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Depends: 

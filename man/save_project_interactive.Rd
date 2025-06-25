@@ -4,9 +4,9 @@
 \alias{save_project_interactive}
 \title{Display interactive project save dialog}
 \usage{
-save_project_interactive(rv, input, session, volumes)
+save_project_interactive(rv, input, session)
 
-save_project_interactive(rv, input, session, volumes)
+save_project_interactive(rv, input, session)
 }
 \arguments{
 \item{rv}{ReactiveValues object containing project state}
@@ -14,8 +14,6 @@ save_project_interactive(rv, input, session, volumes)
 \item{input}{Shiny input values}
 
 \item{session}{Shiny session object}
-
-\item{volumes}{List of available storage volumes}
 }
 \value{
 Invisible NULL, called for side effect
@@ -26,7 +24,7 @@ Invisible NULL, called for side effect
 Shows modal dialog for saving project with directory selection and
 project name input.
 
-Shows modal dialog for saving project with directory selection and
-project name input.
+Shows modal dialog for saving project. If project was previously saved,
+uses the same location unless user chooses to change it.
 }
 \keyword{internal}

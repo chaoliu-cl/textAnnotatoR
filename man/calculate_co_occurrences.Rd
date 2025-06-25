@@ -2,9 +2,9 @@
 % Please edit documentation in R/annotate_gui.R
 \name{calculate_co_occurrences}
 \alias{calculate_co_occurrences}
-\title{Calculate code co-occurrences in annotations}
+\title{Calculate code co-occurrences using unit-based analysis}
 \usage{
-calculate_co_occurrences(annotations)
+calculate_co_occurrences(annotations, unit = "paragraph", text = NULL)
 }
 \arguments{
 \item{annotations}{Data frame containing annotations with columns:
@@ -13,6 +13,10 @@ calculate_co_occurrences(annotations)
 \item end: numeric, ending position of annotation
 \item code: character, code identifier
 }}
+
+\item{unit}{Character string specifying analytical unit: "sentence", "paragraph", or "document"}
+
+\item{text}{Optional character string containing the original text for accurate unit parsing}
 }
 \value{
 Table object containing frequencies of code pairs that co-occur,
@@ -20,12 +24,12 @@ with code pair names as "code1 & code2"
 }
 \description{
 Analyzes text annotations to identify and count instances where different codes
-overlap or co-occur in the same text regions. Handles edge cases and provides
-error-safe operation.
+appear together within the same analytical unit (sentence, paragraph, or document).
+This replaces the character-overlap approach with the standard unit-based methodology.
 }
 \details{
-Co-occurrences are identified by finding overlapping text regions between
-different code annotations. The function sorts annotations by position and
-checks for overlaps between each pair of annotations.
+Co-occurrences are identified by finding codes that appear within the same
+analytical unit. The function parses text into units and maps annotations
+to those units, then counts co-occurrence patterns.
 }
 \keyword{internal}

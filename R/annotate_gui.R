@@ -3134,30 +3134,6 @@ save_project_state <- function(state, filename) {
   invisible(NULL)
 }
 
-#' Get project directory path
-#'
-#' @description
-#' Retrieves or creates the project directory path where all project files will be stored.
-#' Creates the directory if it doesn't exist.
-#'
-#' @return Character string containing the project directory path, or NULL if creation fails
-#' @importFrom shiny showNotification
-#' @keywords internal
-get_project_dir <- function() {
-  project_dir <- handle_error(
-    expr = {
-      data_dir <- init_data_dir()
-      project_dir <- file.path(data_dir, "projects")
-      if (!dir.exists(project_dir)) {
-        dir.create(project_dir, recursive = TRUE)
-      }
-      project_dir
-    },
-    error_msg = "Failed to create or access project directory"
-  )
-  return(project_dir)
-}
-
 #' Load project state from file
 #'
 #' @description
@@ -3248,7 +3224,6 @@ load_selected_project <- function(rv, input, session, project_name) {
 #' Creates an HTML representation of the text with annotations, highlighting codes
 #' with their assigned colors.
 #'
-#' @param rv Reactive values object containing text and annotations
 #' @return HTML string containing the formatted text with annotations
 #' @keywords internal
 update_text_display <- function() {
