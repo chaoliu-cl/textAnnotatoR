@@ -151,9 +151,7 @@ Now let's start coding our interview text:
 5. Add a memo: "Initial challenge in transition to remote work"
 6. Click "Save" to save the code
 
-```{r, out.width = "700px", echo=FALSE}
-knitr::include_graphics("../man/figures/annotate1.png")
-```
+<img src="../man/figures/Save_code_gif.gif" width="700" />
 
 Continue this process for other notable segments in the text. For example:
 
@@ -168,6 +166,15 @@ knitr::include_graphics("../man/figures/annotating_process.png")
 ```
 
 ### Applying Existing Codes
+<<<<<<< HEAD
+
+Once you've created some codes, you can apply them to new text segments:
+
+1. Highlight the target text
+2. Click on "Apply Code" in the side panel 
+3. Choose the code you want to apply from the dropdown menu
+=======
+>>>>>>> 8b9da0ab7d9d9136c1d451b6679666ff966fe139
 
 Once you've created some codes, you can apply them to new text segments:
 
@@ -175,9 +182,7 @@ Once you've created some codes, you can apply them to new text segments:
 2. Click on "Apply Code" in the side panel 
 3. Choose the code you want to apply from the dropdown menu
 
-```{r, out.width = "700px", echo=FALSE}
-knitr::include_graphics("../man/figures/apply_code.png")
-```
+<img src="../man/figures/Apply_code_gif.gif" width="700" />
 
 ### Managing Codes
 
@@ -207,6 +212,37 @@ In some instances, you might find that some of your codes are conceptually simil
 knitr::include_graphics("../man/figures/merge_codes_dialog.png")
 ```
 
+<<<<<<< HEAD
+### Managing Codes
+
+As your coding progresses, you'll want to manage your codes efficiently. You can click on the highlighted text to:
+
+- Replace code
+- Rename code
+- Delete code
+
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("../man/figures/edit_code.png")
+```
+   
+   
+### Merging Similar Codes
+
+In some instances, you might find that some of your codes are conceptually similar or overlapping. textAnnotatoR provides a "Merge Codes" feature to consolidate these:
+
+1. Go to the "Code and Memo" tab
+2. In the "Codes" section, select two or more codes by checking the boxes next to them
+3. Click the "Merge Codes" button
+4. A dialog will appear asking you to name the new merged code:
+   - Enter a descriptive name that encompasses the concepts being merged
+   - Click "Merge" to confirm
+
+```{r, out.width = "650px", echo=FALSE}
+knitr::include_graphics("../man/figures/merge_codes_dialog.png")
+```
+
+=======
+>>>>>>> 8b9da0ab7d9d9136c1d451b6679666ff966fe139
 This feature is particularly useful when:
 
 - Your initial coding was very granular and you now want broader categories
