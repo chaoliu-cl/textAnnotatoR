@@ -60,7 +60,7 @@
       <h1>Practical Example - Qualitative Analysis with textAnnotatoR</h1>
                         <h4 data-toc-skip class="author">Chao Liu</h4>
             
-            <h4 data-toc-skip class="date">2025-06-25</h4>
+            <h4 data-toc-skip class="date">2025-07-06</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/chaoliu-cl/textAnnotatoR/blob/master/vignettes/practical_example.Rmd" class="external-link"><code>vignettes/practical_example.Rmd</code></a></small>
       <div class="d-none name"><code>practical_example.Rmd</code></div>
@@ -113,11 +113,9 @@ where you want to store your project data:</p>
 <span><span class="fu"><a href="../reference/annotate_gui.html">annotate_gui</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>You’ll see a dialog asking you to choose between: 1) Default
 Location: A folder managed by R in your user directory 2) Custom
-Location: A directory of your choice</p>
+Location: A directory of your choice 3) Project-specific Location: A
+customizable directory unique to each project</p>
 <p><img src="../reference/figures/storage_location.png" width="600px" style="display: block; margin: auto;"></p>
-<p>If you choose “Custom Location,” you’ll need to navigate to and
-select your preferred directory. This directory will store all your
-textAnnotatoR projects.</p>
 </div>
 <div class="section level3">
 <h3 id="understanding-the-interface">Understanding the Interface<a class="anchor" aria-label="anchor" href="#understanding-the-interface"></a>
@@ -219,36 +217,10 @@ Isolation”</li>
 </ul>
 <p>Your annotated text will begin to look like this, with different
 colored highlights representing different codes:</p>
-<p><img src="../reference/figures/annotating_process.png" width="700px" style="display: block; margin: auto;"></p>
+<p><img src="../reference/figures/Fig3.png" width="700px" style="display: block; margin: auto;"></p>
 <div class="section level4">
 <h4 id="applying-existing-codes">Applying Existing Codes<a class="anchor" aria-label="anchor" href="#applying-existing-codes"></a>
 </h4>
-<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</p>
-<p>Once you’ve created some codes, you can apply them to new text
-segments:</p>
-<ol style="list-style-type: decimal">
-<li>Highlight the target text</li>
-<li>Click on “Apply Code” in the side panel</li>
-<li>
-<h2 id="choose-the-code-you-want-to-apply-from-the-dropdown-menu">Choose the
-code you want to apply from the dropdown menu</h2>
-<blockquote>
-<blockquote>
-<blockquote>
-<blockquote>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>8b9da0ab7d9d9136c1d451b6679666ff966fe139</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</blockquote>
-</blockquote>
-</blockquote>
-</blockquote>
-</li>
-</ol>
 <p>Once you’ve created some codes, you can apply them to new text
 segments:</p>
 <ol style="list-style-type: decimal">
@@ -256,7 +228,7 @@ segments:</p>
 <li>Click on “Apply Code” in the side panel</li>
 <li>Choose the code you want to apply from the dropdown menu</li>
 </ol>
-<p><img src="../reference/figures/Apply_code_gif.gif" width="700"></p>
+<p><img src="../reference/figures/Fig4.gif" width="700"></p>
 </div>
 <div class="section level4">
 <h4 id="managing-codes">Managing Codes<a class="anchor" aria-label="anchor" href="#managing-codes"></a>
@@ -264,6 +236,7 @@ segments:</p>
 <p>As your coding progresses, you’ll want to manage your codes
 efficiently. You can click on the highlighted text to:</p>
 <ul>
+<li>Remove annotation</li>
 <li>Replace code</li>
 <li>Rename code</li>
 <li>Delete code</li>
@@ -290,39 +263,7 @@ merged</li>
 </li>
 </ol>
 <p><img src="../reference/figures/merge_codes_dialog.png" width="650px" style="display: block; margin: auto;"></p>
-<p>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD ### Managing Codes</p>
-<p>As your coding progresses, you’ll want to manage your codes
-efficiently. You can click on the highlighted text to:</p>
-<ul>
-<li>Replace code</li>
-<li>Rename code</li>
-<li>Delete code</li>
-</ul>
-<p><img src="../reference/figures/edit_code.png" width="650px" style="display: block; margin: auto;"></p>
-</div>
-<div class="section level4">
-<h4 id="merging-similar-codes-1">Merging Similar Codes<a class="anchor" aria-label="anchor" href="#merging-similar-codes-1"></a>
-</h4>
-<p>In some instances, you might find that some of your codes are
-conceptually similar or overlapping. textAnnotatoR provides a “Merge
-Codes” feature to consolidate these:</p>
-<ol style="list-style-type: decimal">
-<li>Go to the “Code and Memo” tab</li>
-<li>In the “Codes” section, select two or more codes by checking the
-boxes next to them</li>
-<li>Click the “Merge Codes” button</li>
-<li>A dialog will appear asking you to name the new merged code:
-<ul>
-<li>Enter a descriptive name that encompasses the concepts being
-merged</li>
-<li>Click “Merge” to confirm</li>
-</ul>
-</li>
-</ol>
-<p><img src="../reference/figures/merge_codes_dialog.png" width="650px" style="display: block; margin: auto;"></p>
-<p>======= &gt;&gt;&gt;&gt;&gt;&gt;&gt;
-8b9da0ab7d9d9136c1d451b6679666ff966fe139 This feature is particularly
-useful when:</p>
+<p>This feature is particularly useful when:</p>
 <ul>
 <li>Your initial coding was very granular and you now want broader
 categories</li>

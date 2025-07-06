@@ -36,7 +36,7 @@ Uses luminance calculation to determine readability."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Validate color readability</h1>
-      <small class="dont-index">Source: <a href="https://github.com/chaoliu-cl/textAnnotatoR/blob/master/R/utils.R" class="external-link"><code>R/utils.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/chaoliu-cl/textAnnotatoR/blob/master/R/annotate_gui.R" class="external-link"><code>R/annotate_gui.R</code></a></small>
       <div class="d-none name"><code>is_color_readable.Rd</code></div>
     </div>
 
@@ -47,7 +47,7 @@ Uses luminance calculation to determine readability.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">is_color_readable</span><span class="op">(</span><span class="va">color</span>, min_luminance <span class="op">=</span> <span class="fl">0.6</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">is_color_readable</span><span class="op">(</span><span class="va">color</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -56,10 +56,6 @@ Uses luminance calculation to determine readability.</p>
 
 <dl><dt id="arg-color">color<a class="anchor" aria-label="anchor" href="#arg-color"></a></dt>
 <dd><p>Character string containing hex color code</p></dd>
-
-
-<dt id="arg-min-luminance">min_luminance<a class="anchor" aria-label="anchor" href="#arg-min-luminance"></a></dt>
-<dd><p>Numeric, minimum luminance threshold (0-1)</p></dd>
 
 </dl></div>
     <div class="section level2">

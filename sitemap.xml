@@ -36,6 +36,7 @@
 <url><loc>/reference/calculate_unit_cooccurrence_matrix.html</loc></url>
 <url><loc>/reference/clean_export_path.html</loc></url>
 <url><loc>/reference/clean_project_path.html</loc></url>
+<url><loc>/reference/code_exists_in_hierarchy.html</loc></url>
 <url><loc>/reference/compare_co_occurrences.html</loc></url>
 <url><loc>/reference/compare_code_patterns.html</loc></url>
 <url><loc>/reference/compare_codes.html</loc></url>
@@ -81,12 +82,16 @@
 <url><loc>/reference/handle_custom_dir_selection.html</loc></url>
 <url><loc>/reference/handle_dir_confirmation.html</loc></url>
 <url><loc>/reference/handle_error.html</loc></url>
+<url><loc>/reference/handle_load_project_confirmation.html</loc></url>
+<url><loc>/reference/handle_save_project_confirmation.html</loc></url>
+<url><loc>/reference/handle_storage_confirmation.html</loc></url>
 <url><loc>/reference/hsl_to_rgb.html</loc></url>
 <url><loc>/reference/import_hierarchy.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
 <url><loc>/reference/init_data_dir.html</loc></url>
 <url><loc>/reference/is_ancestor.html</loc></url>
 <url><loc>/reference/is_color_readable.html</loc></url>
+<url><loc>/reference/load_project_from_path.html</loc></url>
 <url><loc>/reference/load_project_interactive.html</loc></url>
 <url><loc>/reference/load_project_state.html</loc></url>
 <url><loc>/reference/load_selected_project.html</loc></url>
@@ -99,6 +104,7 @@
 <url><loc>/reference/plot_overlap_patterns.html</loc></url>
 <url><loc>/reference/plot_sequence_patterns.html</loc></url>
 <url><loc>/reference/process_comparison_file.html</loc></url>
+<url><loc>/reference/remove_annotation.html</loc></url>
 <url><loc>/reference/restore_node.html</loc></url>
 <url><loc>/reference/save_annotated_text_interactive.html</loc></url>
 <url><loc>/reference/save_as_html.html</loc></url>
