@@ -2,19 +2,22 @@
 % Please edit documentation in R/directory_management.R
 \name{init_data_dir}
 \alias{init_data_dir}
-\title{Initialize data directory with user confirmation and location choice}
+\title{Initialize data directory with user options}
 \usage{
-init_data_dir(session = NULL)
+init_data_dir(session)
 }
 \arguments{
-\item{session}{Shiny session object for displaying confirmation dialog}
+\item{session}{Shiny session object for displaying dialog}
 }
 \value{
-Character string containing the path to the data directory, or NULL if declined
+Character string containing the path to the selected data directory, or NULL if declined
 }
 \description{
-Creates and initializes the package data directory after obtaining explicit
-user confirmation. Allows users to choose between the default location or
-a custom directory of their choice.
+Provides users with options for where to store annotation data:
+\enumerate{
+\item User's home directory (default R_user_dir location)
+\item Custom directory selected by the user
+\item Project-specific directory (for per-project storage)
+}
 }
 \keyword{internal}

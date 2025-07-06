@@ -4,24 +4,27 @@
 \alias{calculate_hierarchy_stats}
 \title{Calculate hierarchy statistics}
 \usage{
-calculate_hierarchy_stats(node)
+calculate_hierarchy_stats(node, all_codes = NULL)
 }
 \arguments{
 \item{node}{Root node of the hierarchy tree}
+
+\item{all_codes}{Character vector of all codes in the application}
 }
 \value{
 A list containing hierarchy statistics:
 \itemize{
-\item total_themes: Total number of themes in the hierarchy
-\item total_codes: Total number of codes in the hierarchy (including those under root)
+\item total_themes: Total number of themes in the hierarchy (excluding root)
+\item total_codes: Total number of codes in the hierarchy
+\item unassigned_codes: Number of codes not in the hierarchy
 \item max_depth: Maximum depth of the hierarchy tree
-\item codes_per_theme: List showing number of codes in each theme/root
+\item codes_per_theme: List showing number of codes in each theme
 \item average_codes_per_theme: Average number of codes per theme
 }
 }
 \description{
 Calculates various statistics about the code hierarchy including the total number
 of themes and codes, maximum depth, and distribution of codes across themes.
-Now includes codes directly under the root node.
+Now also accounts for codes not associated with any theme.
 }
 \keyword{internal}

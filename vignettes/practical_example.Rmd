@@ -65,12 +65,11 @@ annotate_gui()
 You'll see a dialog asking you to choose between:
 1) Default Location: A folder managed by R in your user directory
 2) Custom Location: A directory of your choice
+3) Project-specific Location: A customizable directory unique to each project
 
 ```{r, out.width = "600px", echo=FALSE}
 knitr::include_graphics("../man/figures/storage_location.png")
 ```
-
-If you choose "Custom Location," you'll need to navigate to and select your preferred directory. This directory will store all your textAnnotatoR projects.
 
 ## Understanding the Interface
 
@@ -162,19 +161,10 @@ Continue this process for other notable segments in the text. For example:
 Your annotated text will begin to look like this, with different colored highlights representing different codes:
 
 ```{r, out.width = "700px", echo=FALSE}
-knitr::include_graphics("../man/figures/annotating_process.png")
+knitr::include_graphics("../man/figures/Fig3.png")
 ```
 
 ### Applying Existing Codes
-<<<<<<< HEAD
-
-Once you've created some codes, you can apply them to new text segments:
-
-1. Highlight the target text
-2. Click on "Apply Code" in the side panel 
-3. Choose the code you want to apply from the dropdown menu
-=======
->>>>>>> 8b9da0ab7d9d9136c1d451b6679666ff966fe139
 
 Once you've created some codes, you can apply them to new text segments:
 
@@ -182,12 +172,13 @@ Once you've created some codes, you can apply them to new text segments:
 2. Click on "Apply Code" in the side panel 
 3. Choose the code you want to apply from the dropdown menu
 
-<img src="../man/figures/Apply_code_gif.gif" width="700" />
+<img src="../man/figures/Fig4.gif" width="700" />
 
 ### Managing Codes
 
 As your coding progresses, you'll want to manage your codes efficiently. You can click on the highlighted text to:
 
+- Remove annotation
 - Replace code
 - Rename code
 - Delete code
@@ -195,7 +186,6 @@ As your coding progresses, you'll want to manage your codes efficiently. You can
 ```{r, out.width = "650px", echo=FALSE}
 knitr::include_graphics("../man/figures/edit_code.png")
 ```
-   
    
 ### Merging Similar Codes
 
@@ -212,37 +202,6 @@ In some instances, you might find that some of your codes are conceptually simil
 knitr::include_graphics("../man/figures/merge_codes_dialog.png")
 ```
 
-<<<<<<< HEAD
-### Managing Codes
-
-As your coding progresses, you'll want to manage your codes efficiently. You can click on the highlighted text to:
-
-- Replace code
-- Rename code
-- Delete code
-
-```{r, out.width = "650px", echo=FALSE}
-knitr::include_graphics("../man/figures/edit_code.png")
-```
-   
-   
-### Merging Similar Codes
-
-In some instances, you might find that some of your codes are conceptually similar or overlapping. textAnnotatoR provides a "Merge Codes" feature to consolidate these:
-
-1. Go to the "Code and Memo" tab
-2. In the "Codes" section, select two or more codes by checking the boxes next to them
-3. Click the "Merge Codes" button
-4. A dialog will appear asking you to name the new merged code:
-   - Enter a descriptive name that encompasses the concepts being merged
-   - Click "Merge" to confirm
-
-```{r, out.width = "650px", echo=FALSE}
-knitr::include_graphics("../man/figures/merge_codes_dialog.png")
-```
-
-=======
->>>>>>> 8b9da0ab7d9d9136c1d451b6679666ff966fe139
 This feature is particularly useful when:
 
 - Your initial coding was very granular and you now want broader categories

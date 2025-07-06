@@ -2,27 +2,28 @@
 % Please edit documentation in R/annotate_gui.R
 \name{analyze_coverage}
 \alias{analyze_coverage}
-\title{Analyze coverage patterns with unit-based methodology}
+\title{Analyze coverage patterns in annotations}
 \usage{
-analyze_coverage(annotations, unit = "paragraph", text = NULL)
+analyze_coverage(annotations)
 }
 \arguments{
-\item{annotations}{Data frame containing text annotations}
-
-\item{unit}{Character string specifying analytical unit}
-
-\item{text}{Optional character string for accurate unit parsing}
+\item{annotations}{Data frame containing text annotations with columns:
+\itemize{
+\item start: numeric, starting position of annotation
+\item end: numeric, ending position of annotation
+\item code: character, code applied to the annotation
+}}
 }
 \value{
 List containing:
 \itemize{
-\item clusters: List of annotation clusters based on units
+\item clusters: List of annotation clusters
 \item density: List containing overall density metrics
-\item distribution: List containing code frequencies and unit positions
+\item distribution: List containing code frequencies and positions
 }
 }
 \description{
-Analyzes how codes are distributed throughout the text using analytical units
-rather than character-level analysis.
+Analyzes how codes are distributed throughout the text, including clustering
+patterns and coding density.
 }
 \keyword{internal}

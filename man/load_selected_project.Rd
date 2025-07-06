@@ -2,21 +2,18 @@
 % Please edit documentation in R/annotate_gui.R
 \name{load_selected_project}
 \alias{load_selected_project}
-\title{Load selected project state}
+\title{Load project from a selected recent project}
 \usage{
-load_selected_project(rv, input, session, project_name)
+load_selected_project(rv, input, session)
 }
 \arguments{
-\item{rv}{Reactive values object to update}
+\item{rv}{ReactiveValues object containing application state}
 
 \item{input}{Shiny input object}
 
-\item{session}{The current Shiny session}
-}
-\value{
-Invisible NULL
+\item{session}{Shiny session object}
 }
 \description{
-Loads a previously saved project state and updates all reactive values.
+Loads a project from the list of recent projects
 }
 \keyword{internal}

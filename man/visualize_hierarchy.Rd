@@ -4,23 +4,18 @@
 \alias{visualize_hierarchy}
 \title{Generate visual representation of code hierarchy}
 \usage{
-visualize_hierarchy(node)
+visualize_hierarchy(node, all_codes = NULL)
 }
 \arguments{
-\item{node}{Root node of hierarchy tree with attributes:
-\itemize{
-\item name: character, node name
-\item type: character, "root", "theme" or "code"
-\item description: character, node description
-\item children: list of child nodes
-}}
+\item{node}{Root node of hierarchy tree with attributes}
+
+\item{all_codes}{Character vector of all codes in the application}
 }
 \value{
 Character string containing HTML markup for tree visualization
 }
 \description{
 Creates an HTML tree visualization of the code hierarchy with proper
-indentation, icons, and interactive elements. Now properly displays codes
-under the root node.
+indentation, icons, and interactive elements. Now also displays unassigned codes.
 }
 \keyword{internal}

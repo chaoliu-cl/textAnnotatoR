@@ -2,9 +2,9 @@
 % Please edit documentation in R/annotate_gui.R
 \name{calculate_transitions}
 \alias{calculate_transitions}
-\title{Calculate transitions between consecutive codes (updated)}
+\title{Calculate transitions between consecutive codes}
 \usage{
-calculate_transitions(annotations, unit = "paragraph", text = NULL)
+calculate_transitions(annotations)
 }
 \arguments{
 \item{annotations}{Data frame containing annotations with columns:
@@ -13,10 +13,6 @@ calculate_transitions(annotations, unit = "paragraph", text = NULL)
 \item end: numeric, ending position of annotation
 \item code: character, code identifier
 }}
-
-\item{unit}{Character string specifying analytical unit for transition analysis}
-
-\item{text}{Optional character string for accurate unit parsing}
 }
 \value{
 List where each element is a named vector containing:
@@ -27,10 +23,12 @@ List where each element is a named vector containing:
 }
 \description{
 Analyzes the sequence of code applications to identify transitions between
-consecutive codes based on analytical units rather than strict position.
+consecutive codes in the text. Creates a list of code pairs representing
+each transition from one code to another.
 }
 \details{
-Transitions are identified by analyzing the sequence of analytical units
-and tracking code changes between adjacent units.
+Transitions are identified by sorting annotations by position and then
+analyzing consecutive pairs of codes. The function handles edge cases
+and provides error-safe operation.
 }
 \keyword{internal}

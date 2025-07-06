@@ -19,7 +19,7 @@ mock_session <- function() {
 test_that("handle_error function works correctly", {
   # Mock showNotification
   mockery::stub(handle_error, "shiny::showNotification", function(...) NULL)
-
+  
   # Test successful execution
   result <- handle_error(
     expr = 1 + 1,
@@ -28,7 +28,7 @@ test_that("handle_error function works correctly", {
     finally_msg = "Done"
   )
   expect_equal(result, 2)
-
+  
   # Test error handling
   result <- handle_error(
     expr = stop("Test error"),
@@ -37,17 +37,34 @@ test_that("handle_error function works correctly", {
   expect_null(result)
 })
 
+test_that("get_project_dir uses temporary directory", {
+  # Mock tools::R_user_dir to return temp directory
+  temp_dir <- tempdir()
+  mockery::stub(get_project_dir, "tools::R_user_dir", temp_dir)
+  
+  # Also mock handle_error to execute the expression directly
+  mockery::stub(get_project_dir, "handle_error", function(expr, ...) {
+    eval(expr)
+  })
+  
+  dir <- get_project_dir()
+  expect_true(dir.exists(dir))
+  expect_true(grepl(basename(tempdir()), dir))
+})
+
 test_that("save_project_state works with temporary directory", {
   # Create temporary project directory
   project_dir <- file.path(tempdir(), "projects")
   dir.create(project_dir, recursive = TRUE, showWarnings = FALSE)
-
+  
   # Mock get_project_dir to return our temp directory
   mockery::stub(save_project_state, "get_project_dir", function() project_dir)
-
+  
   # Mock handle_error to execute expression directly
-  mockery::stub(save_project_state, "handle_error", function(expr, ...) expr)
-
+  mockery::stub(save_project_state, "handle_error", function(expr, ...) {
+    eval(expr)
+  })
+  
   # Setup test data
   test_state <- list(
     text = "Sample text",
@@ -63,14 +80,14 @@ test_that("save_project_state works with temporary directory", {
     memos = list(),
     code_descriptions = list()
   )
-
+  
   # Test saving
   filename <- "test_project.rds"
   save_project_state(test_state, filename)
-
+  
   # Verify file exists
   expect_true(file.exists(file.path(project_dir, filename)))
-
+  
   # Clean up
   unlink(project_dir, recursive = TRUE)
 })
@@ -79,12 +96,14 @@ test_that("load_project_state works with temporary directory", {
   # Create temporary project directory
   project_dir <- file.path(tempdir(), "projects")
   dir.create(project_dir, recursive = TRUE, showWarnings = FALSE)
-
+  
   # Mock get_project_dir and showNotification
   mockery::stub(load_project_state, "get_project_dir", function() project_dir)
   mockery::stub(load_project_state, "showNotification", function(...) NULL)
-  mockery::stub(load_project_state, "handle_error", function(expr, ...) expr)
-
+  mockery::stub(load_project_state, "handle_error", function(expr, ...) {
+    eval(expr)
+  })
+  
   # Setup test data
   test_state <- list(
     text = "Sample text",
@@ -96,19 +115,19 @@ test_that("load_project_state works with temporary directory", {
       stringsAsFactors = FALSE
     )
   )
-
+  
   # Save test file
   filename <- "test_project.rds"
   saveRDS(test_state, file.path(project_dir, filename))
-
+  
   # Test loading
   loaded_state <- load_project_state(filename)
   expect_equal(loaded_state$text, test_state$text)
   expect_equal(loaded_state$annotations, test_state$annotations)
-
+  
   # Test loading non-existent file
   expect_null(load_project_state("nonexistent.rds"))
-
+  
   # Clean up
   unlink(project_dir, recursive = TRUE)
 })
@@ -116,7 +135,7 @@ test_that("load_project_state works with temporary directory", {
 test_that("save_as_html works with temporary directory", {
   # Mock update_text_display
   mockery::stub(save_as_html, "update_text_display", function(rv) "Sample HTML content")
-
+  
   # Setup test data using a list instead of reactiveValues
   rv <- list(
     text = "Sample text",
@@ -128,14 +147,14 @@ test_that("save_as_html works with temporary directory", {
     ),
     code_colors = c(test = "#FF0000")
   )
-
+  
   # Use temporary file
   temp_file <- tempfile(fileext = ".html")
-
+  
   # Test saving
   save_as_html(temp_file, rv)
   expect_true(file.exists(temp_file))
-
+  
   # Clean up
   unlink(temp_file)
 })
@@ -151,14 +170,14 @@ test_that("save_as_text works with temporary directory", {
       stringsAsFactors = FALSE
     )
   )
-
+  
   # Use temporary file
   temp_file <- tempfile(fileext = ".txt")
-
+  
   # Test saving
   save_as_text(temp_file, rv)
   expect_true(file.exists(temp_file))
-
+  
   # Clean up
   unlink(temp_file)
 })
@@ -171,13 +190,13 @@ test_that("create_plain_text_annotations works correctly", {
     code = c("code1", "code2"),
     stringsAsFactors = FALSE
   )
-
+  
   result <- create_plain_text_annotations(text, annotations)
-
+  
   # Test each part of the output string
   expect_match(result, "\\[code1: This\\]")
   expect_match(result, "\\[code2:\\s+a sampl\\]")  # Allow for whitespace after the colon
-
+  
   # Test the complete structure with exact spacing
   expect_equal(
     result,
@@ -188,7 +207,7 @@ test_that("create_plain_text_annotations works correctly", {
 test_that("create_new_project resets all values", {
   # Setup mock session with additional required functions
   session <- mock_session()
-
+  
   # Create reactive values
   rv <- reactiveValues(
     text = "old text",
@@ -206,15 +225,15 @@ test_that("create_new_project resets all values", {
     action_index = 1,
     merged_codes = list(a = "b")
   )
-
+  
   # Mock showNotification and updateTextAreaInput
   mockery::stub(create_new_project, "showNotification", function(...) NULL)
   mockery::stub(create_new_project, "updateTextAreaInput", function(...) NULL)
-
+  
   # Run in reactive environment
   shiny::isolate({
     create_new_project(rv, session)
-
+    
     expect_equal(rv$text, "")
     expect_equal(nrow(rv$annotations), 0)
     expect_equal(length(rv$codes), 0)

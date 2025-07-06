@@ -2,7 +2,7 @@
 % Please edit documentation in R/directory_management.R
 \name{get_project_dir}
 \alias{get_project_dir}
-\title{Get project directory path}
+\title{Get project directory path based on storage mode}
 \usage{
 get_project_dir(rv = NULL)
 }
@@ -10,10 +10,10 @@ get_project_dir(rv = NULL)
 \item{rv}{ReactiveValues object containing application state (optional)}
 }
 \value{
-Character string containing the project directory path, or NULL if creation fails
+Character string containing the project directory path, or NULL if not applicable
 }
 \description{
-Retrieves or creates the project directory path where all project files will be stored.
-Creates the directory if it doesn't exist.
+Retrieves or creates the project directory path where project files will be stored,
+taking into account the user's selected storage mode.
 }
 \keyword{internal}

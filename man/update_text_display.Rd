@@ -4,13 +4,16 @@
 \alias{update_text_display}
 \title{Update text display with annotations}
 \usage{
-update_text_display()
+update_text_display(rv)
+}
+\arguments{
+\item{rv}{ReactiveValues object containing text and annotations}
 }
 \value{
 HTML string containing the formatted text with annotations
 }
 \description{
 Creates an HTML representation of the text with annotations, highlighting codes
-with their assigned colors.
+with their assigned colors and preserving line breaks.
 }
 \keyword{internal}

@@ -2,29 +2,25 @@
 % Please edit documentation in R/annotate_gui.R
 \name{generate_network_visualization}
 \alias{generate_network_visualization}
-\title{Generate network visualization for unit-based co-occurrence}
+\title{Generate network visualization for code co-occurrence}
 \usage{
-generate_network_visualization(co_matrix, jaccard_matrix, phi_matrix, codes)
-
 generate_network_visualization(co_matrix, jaccard_matrix, phi_matrix, codes)
 }
 \arguments{
-\item{co_matrix}{Co-occurrence count matrix}
+\item{co_matrix}{Matrix of raw co-occurrence counts between codes}
 
-\item{jaccard_matrix}{Jaccard similarity matrix}
+\item{jaccard_matrix}{Matrix of Jaccard similarity coefficients}
 
-\item{phi_matrix}{Phi coefficient matrix}
+\item{phi_matrix}{Matrix of phi coefficients}
 
 \item{codes}{Character vector of code names}
 }
 \value{
-Recorded plot object
-
-Recorded plot object
+A recordedplot object containing the network visualization
 }
 \description{
-Creates network plot showing code relationships based on unit co-occurrence
-
-Creates network plot showing code relationships based on unit co-occurrence
+Creates a network plot showing relationships between codes based on co-occurrence
+patterns. Node sizes reflect total co-occurrences, edge thickness shows Jaccard
+similarity, and edge opacity indicates phi coefficient magnitude.
 }
 \keyword{internal}

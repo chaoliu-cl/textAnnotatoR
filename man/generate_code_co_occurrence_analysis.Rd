@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotate_gui.R
 \name{generate_code_co_occurrence_analysis}
 \alias{generate_code_co_occurrence_analysis}
-\title{Generate code co-occurrence statistics and visualization with unit-based analysis}
+\title{Generate code co-occurrence statistics and visualization}
 \usage{
 generate_code_co_occurrence_analysis(
   annotations,
@@ -18,9 +18,9 @@ generate_code_co_occurrence_analysis(
 \item code: character, code applied to the annotation
 }}
 
-\item{text}{Character string containing the original text}
+\item{text}{Character string containing the original text (optional)}
 
-\item{unit}{Character string specifying analytical unit: "sentence", "paragraph", or "document"}
+\item{unit}{Character string specifying the analytical unit: "sentence", "paragraph", or "document"}
 }
 \value{
 List containing:
@@ -31,12 +31,11 @@ List containing:
 \item network_plot: Network visualization of code relationships
 \item heatmap_plot: Heatmap visualization of code co-occurrences
 \item summary: List of summary statistics
-\item unit_info: Information about the analytical units used
 }
 }
 \description{
-Performs a comprehensive analysis of code co-occurrences using standard unit-based
-methodology. Analyzes codes that appear together within the same analytical unit
-(sentence, paragraph, or document) rather than character-level overlap.
+Performs a comprehensive analysis of code co-occurrences in the text, including
+calculation of various similarity metrics and generation of network and heatmap
+visualizations.
 }
 \keyword{internal}

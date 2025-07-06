@@ -25,7 +25,7 @@ Invisible NULL, called for side effect
 }
 \description{
 Creates an HTML document containing the annotated text with proper styling
-for code highlights and formatting.
+for code highlights and formatting, preserving line breaks.
 
 Creates an HTML document containing the annotated text with proper styling
 for code highlights and formatting.

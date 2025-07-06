@@ -161,7 +161,7 @@ load_project_state <- function(filename) {
 #' @keywords internal
 save_as_html <- function(filename, rv) {
   # Get the current state of the text display
-  html_content <- update_text_display()
+  html_content <- update_text_display(rv)
 
   # Create a complete HTML document
   full_html <- paste0(
@@ -203,199 +203,96 @@ save_as_text <- function(filename, rv) {
   writeLines(annotated_text, filename)
 }
 
-#' Create plain text version of annotations
+#' Enhanced save project interactive dialog
 #'
 #' @description
-#' Converts annotated text to plain text format with code markers. Each annotation
-#' is represented as a code identifier and annotated text wrapped in square brackets.
-#' Multiple annotations are preserved and shown in order of appearance in the text.
-#'
-#' @param text Character string containing the original text
-#' @param annotations Data frame of annotations with columns:
-#'   \itemize{
-#'     \item start: Numeric vector of starting positions
-#'     \item end: Numeric vector of ending positions
-#'     \item code: Character vector of code names
-#'   }
-#'
-#' @return Character string containing formatted text with code markers
-#' @keywords internal
-create_plain_text_annotations <- function(text, annotations) {
-  if (nrow(annotations) == 0) {
-    return(text)
-  }
-
-  sorted_annotations <- annotations[order(annotations$start), ]
-  plain_text <- ""
-  last_end <- 0
-
-  for (i in 1:nrow(sorted_annotations)) {
-    if (sorted_annotations$start[i] > last_end + 1) {
-      plain_text <- paste0(plain_text, substr(text, last_end + 1, sorted_annotations$start[i] - 1))
-    }
-
-    # Include source file information in the annotation marker
-    source_info <- if ("source_file" %in% colnames(sorted_annotations) &&
-                       !is.na(sorted_annotations$source_file[i]) &&
-                       sorted_annotations$source_file[i] != "") {
-      paste0(" (", sorted_annotations$source_file[i], ")")
-    } else {
-      ""
-    }
-
-    plain_text <- paste0(plain_text,
-                         "[", sorted_annotations$code[i], source_info, ": ",
-                         substr(text, sorted_annotations$start[i], sorted_annotations$end[i]),
-                         "]")
-    last_end <- sorted_annotations$end[i]
-  }
-
-  if (last_end < nchar(text)) {
-    plain_text <- paste0(plain_text, substr(text, last_end + 1, nchar(text)))
-  }
-
-  return(plain_text)
-}
-
-# Update the apply_action function to handle source_file
-apply_action <- function(rv, action, reverse = FALSE) {
-  data <- if (reverse) action$reverse_data else action$data
-
-  switch(action$type,
-         "add_annotation" = {
-           if (reverse) {
-             # Remove annotation
-             if(nrow(rv$annotations) > 0) {
-               rv$annotations <- rv$annotations[-which(
-                 rv$annotations$start == data$start &
-                   rv$annotations$end == data$end &
-                   rv$annotations$code == data$code
-               ), ]
-             }
-           } else {
-             # Add annotation
-             if(is.null(rv$annotations)) {
-               rv$annotations <- data.frame(
-                 start = integer(),
-                 end = integer(),
-                 text = character(),
-                 code = character(),
-                 memo = character(),
-                 source_file = character(),
-                 stringsAsFactors = FALSE
-               )
-             }
-
-             # Ensure data has source_file column
-             if (!"source_file" %in% colnames(data)) {
-               data$source_file <- rv$current_file_name %||% "Unknown"
-             }
-
-             rv$annotations <- rbind(rv$annotations, data)
-           }
-         },
-         "merge_codes" = {
-           # Handle merge_codes as before...
-           # (existing merge_codes logic remains the same)
-         })
-
-  invisible(rv)
-}
-
-#' Display interactive project save dialog
-#'
-#' @description
-#' Shows modal dialog for saving project. If project was previously saved,
-#' uses the same location unless user chooses to change it.
+#' Shows modal dialog for saving project with options based on the selected storage mode.
+#' For project-specific mode, always requires directory selection.
 #'
 #' @param rv ReactiveValues object containing project state
 #' @param input Shiny input values
 #' @param session Shiny session object
+#' @param roots List of available storage volumes for directory selection
 #' @return Invisible NULL, called for side effect
 #' @keywords internal
-save_project_interactive <- function(rv, input, session) {
-  # Check if project has a saved location
-  has_saved_location <- !is.null(rv$project_save_path) &&
-    !is.null(rv$current_project)
-
-  if (has_saved_location) {
-    # Show simplified dialog for existing projects
-    showModal(modalDialog(
-      title = "Save Project",
-      textInput("project_name", "Project Name:",
-                value = rv$current_project),
-
-      # Show current save location
-      tags$div(
-        style = "margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;",
-        tags$p(
-          tags$strong("Current Save Location: "),
-          tags$br(),
-          tags$span(style = "font-family: monospace; font-size: 0.9em;",
-                    rv$project_save_path)
-        )
-      ),
-
-      # Option to change location
-      checkboxInput("change_location", "Save to different location", value = FALSE),
-
-      # Conditional directory selection
-      conditionalPanel(
-        condition = "input.change_location == true",
-        div(style = "margin: 10px 0;",
-            shinyDirButton("directory_select",
-                           label = "Choose New Directory",
-                           title = "Select Directory to Save Project")
-        ),
-        verbatimTextOutput("selected_dir")
-      ),
-
-      footer = tagList(
-        modalButton("Cancel"),
-        actionButton("confirm_save_project", "Save")
-      )
-    ))
+save_project_interactive <- function(rv, input, session, roots) {
+  # Determine if this is a "Save As" scenario (project already exists)
+  is_save_as <- !is.null(rv$current_project) && !is.null(rv$current_project_path)
+  
+  # Determine if directory selection is needed
+  needs_dir_selection <- rv$storage_mode == "project"
+  
+  # Get current project directory
+  project_dir <- if (!is.null(rv$storage_mode) && rv$storage_mode != "project") {
+    get_project_dir(rv)
   } else {
-    # Show full dialog for new projects
-    showModal(modalDialog(
-      title = "Save Project",
-      textInput("project_name", "Project Name:",
-                value = rv$current_project %||% ""),
-
-      # Show current save location info
-      tags$div(
-        style = "margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;",
+    "Project-specific storage: You'll need to select a location"
+  }
+  
+  showModal(modalDialog(
+    title = if (is_save_as) "Save Project As" else "Save Project",
+    
+    # Show current project info if this is a Save As
+    if (is_save_as) {
+      div(
+        style = "margin-bottom: 15px; padding: 10px; background-color: #e8f4e8; border-radius: 4px;",
         tags$p(
-          tags$strong("Save Location: "),
-          if (!is.null(rv$data_dir)) {
-            "User directory (persistent storage)"
-          } else {
-            "Temporary directory (data will not persist between sessions)"
-          }
-        ),
-        tags$p(tags$small(get_project_dir(rv)))
+          tags$strong("Current Project: "), rv$current_project,
+          tags$br(),
+          tags$small("Currently saved at: ", rv$current_project_path)
+        )
+      )
+    },
+    
+    textInput("project_name", "Project Name:",
+              value = rv$current_project %||% ""),
+    
+    # Show current storage mode info
+    tags$div(
+      style = "margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 4px;",
+      tags$p(
+        tags$strong("Storage Mode: "),
+        if (!is.null(rv$storage_mode)) {
+          switch(rv$storage_mode,
+                 "default" = "Default location (R user directory)",
+                 "custom" = "Custom directory",
+                 "project" = "Project-specific storage")
+        } else {
+          "Default location"
+        }
       ),
-
-      # Directory selection for new projects
+      tags$p(tags$small(project_dir))
+    ),
+    
+    # Only show directory selection for project-specific mode or when requested
+    if (needs_dir_selection) {
       div(style = "margin: 10px 0;",
           shinyDirButton("directory_select",
                          label = "Choose Directory",
                          title = "Select Directory to Save Project")
-      ),
-      verbatimTextOutput("selected_dir"),
-
-      footer = tagList(
-        modalButton("Cancel"),
-        actionButton("confirm_save_project", "Save")
       )
-    ))
-  }
+    },
+    
+    if (needs_dir_selection) {
+      verbatimTextOutput("selected_dir")
+    },
+    
+    footer = tagList(
+      modalButton("Cancel"),
+      # Add Save As button if project already exists
+      if (is_save_as && !needs_dir_selection) {
+        actionButton("save_as_project", "Save As New Copy")
+      },
+      actionButton("confirm_save_project", if (is_save_as) "Save As" else "Save")
+    )
+  ))
 }
 
-#' Display interactive project load dialog
+#' Enhanced project loading functionality
 #'
 #' @description
-#' Shows modal dialog for loading project with file selection functionality.
+#' Provides an improved project loading dialog with options to browse for project files
+#' in any location, supporting the project-specific storage model.
 #'
 #' @param rv ReactiveValues object for project state
 #' @param input Shiny input values
@@ -407,14 +304,29 @@ save_project_interactive <- function(rv, input, session) {
 load_project_interactive <- function(rv, input, session, roots) {
   showModal(modalDialog(
     title = "Load Project",
-    div(style = "margin: 10px 0;",
+    tags$p("Select a project file to load:"),
+    
+    # Storage mode dependent options
+    if (!is.null(rv$storage_mode) && rv$storage_mode != "project") {
+      # For default/custom modes, show recent projects first (if any)
+      div(
+        style = "margin-bottom: 20px;",
+        tags$p(tags$strong("Recent Projects:")),
+        uiOutput("recent_projects_list")
+      )
+    },
+    
+    # Always show file browser for maximum flexibility
+    div(style = "margin: 15px 0;",
         shinyFilesButton("file_select",
-                         label = "Choose Project File",
+                         label = "Browse for Project File",
                          title = "Select Project File",
                          multiple = FALSE)
     ),
+    
     tags$p("Selected file:"),
     verbatimTextOutput("selected_file"),
+    
     footer = tagList(
       modalButton("Cancel"),
       actionButton("confirm_load_project", "Load")
@@ -422,52 +334,3 @@ load_project_interactive <- function(rv, input, session, roots) {
   ))
 }
 
-#' Initialize new project
-#'
-#' @description
-#' Creates new project by resetting all reactive values to defaults
-#' and clearing UI elements.
-#'
-#' @param rv ReactiveValues object to reset containing:
-#'   \itemize{
-#'     \item text: Text content
-#'     \item annotations: Annotation data frame
-#'     \item codes: Vector of codes
-#'     \item code_tree: Hierarchy Node object
-#'     \item All other project state values
-#'   }
-#' @param session Shiny session object
-#'
-#' @return Invisible NULL, called for side effect
-#' @keywords internal
-create_new_project <- function(rv, session) {
-  rv$text <- ""
-  rv$annotations <- data.frame(
-    start = integer(),
-    end = integer(),
-    text = character(),
-    code = character(),
-    memo = character(),
-    source_file = character(),  # Include source_file column
-    stringsAsFactors = FALSE
-  )
-  rv$codes <- character()
-  rv$code_tree <- Node$new("Root")
-  rv$code_colors <- character()
-  rv$memos <- list()
-  rv$code_descriptions <- list()
-  rv$history <- list(list(text = "", annotations = data.frame()))
-  rv$history_index <- 1
-  rv$current_project <- NULL
-  rv$current_file_name <- NULL  # Reset current file name
-  rv$project_modified <- FALSE
-  rv$action_history <- list()
-  rv$action_index <- 0
-  rv$merged_codes <- list()
-
-  # Clear UI elements
-  updateTextAreaInput(session, "text_input", value = "")
-  session$sendCustomMessage("clearSelection", list())
-
-  showNotification("New project created", type = "message")
-}

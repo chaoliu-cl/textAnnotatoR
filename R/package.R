@@ -18,11 +18,11 @@ if(getRversion() >= "2.15.1") {
 
 #' @importFrom stats complete.cases sd setNames
 #' @importFrom grDevices colorRampPalette
-#' @importFrom graphics axis image plot.new
-#' @importFrom utils tail
+#' @importFrom graphics axis image plot.new abline rect segments
+#' @importFrom utils tail head
 #' @importFrom magrittr %>%
 #' @importFrom shiny HTML addResourcePath column conditionalPanel div downloadButton downloadHandler
 #' @importFrom shiny fluidRow formatStyle h4 helpText hr modalButton observe p renderText span strong
 #' @importFrom shiny styleInterval tabsetPanel tagList uiOutput updateSelectInput verbatimTextOutput
-#' @importFrom shiny wellPanel withProgress br
+#' @importFrom shiny wellPanel withProgress br textOutput radioButtons
 NULL

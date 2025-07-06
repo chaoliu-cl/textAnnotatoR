@@ -2,25 +2,20 @@
 % Please edit documentation in R/annotate_gui.R
 \name{generate_heatmap_visualization}
 \alias{generate_heatmap_visualization}
-\title{Generate heatmap visualization for unit-based co-occurrence}
+\title{Generate heatmap visualization for code co-occurrence}
 \usage{
-generate_heatmap_visualization(jaccard_matrix, codes)
-
 generate_heatmap_visualization(jaccard_matrix, codes)
 }
 \arguments{
-\item{jaccard_matrix}{Jaccard similarity matrix}
+\item{jaccard_matrix}{Matrix of Jaccard similarity coefficients between codes}
 
 \item{codes}{Character vector of code names}
 }
 \value{
-Recorded plot object
-
-Recorded plot object
+A recordedplot object containing the heatmap visualization
 }
 \description{
-Creates heatmap showing Jaccard similarity coefficients between codes
-
-Creates heatmap showing Jaccard similarity coefficients between codes
+Creates a heatmap showing the strength of relationships between codes based on
+Jaccard similarity coefficients. Darker colors indicate stronger relationships.
 }
 \keyword{internal}
