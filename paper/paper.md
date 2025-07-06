@@ -1,5 +1,5 @@
 ---
-title: 'textAnnotatoR: An Interactive Text Annotation Tool with 'shiny' GUI'
+title: 'textAnnotatoR: An Interactive Text Annotation Tool with ''shiny'' GUI'
 tags:
   - R
   - text analysis
@@ -13,7 +13,7 @@ authors:
 affiliations:
   - name: Cedarville University
     index: 1
-date: 18 November 2024
+date: 5 July 2025
 bibliography: paper.bib
 ---
 
@@ -194,4 +194,4 @@ For team-based research, textAnnotatoR includes inter-coder comparison tools. Tw
 **Figure 10**: Comparison analysis interface that shows coding differences between two researchers, with visual indicators of agreement and discrepancy areas.
 
 # Acknowledgements
-We acknowledge contributions from the R and Shiny communities, whose tools and packages made this project possible. 
+We acknowledge contributions from the R and Shiny communities, whose tools and packages made this project possible.
