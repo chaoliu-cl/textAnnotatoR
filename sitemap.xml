@@ -61,8 +61,12 @@
 <url><loc>/reference/generate_text_summary.html</loc></url>
 <url><loc>/reference/generate_word_cloud.html</loc></url>
 <url><loc>/reference/getVolumes.html</loc></url>
+<url><loc>/reference/get_calendar_icon.html</loc></url>
+<url><loc>/reference/get_closed_folder_icon.html</loc></url>
 <url><loc>/reference/get_code_names.html</loc></url>
 <url><loc>/reference/get_export_dir.html</loc></url>
+<url><loc>/reference/get_file_icon.html</loc></url>
+<url><loc>/reference/get_folder_icon.html</loc></url>
 <url><loc>/reference/get_next_palette_color.html</loc></url>
 <url><loc>/reference/get_project_dir.html</loc></url>
 <url><loc>/reference/grapes-or-or-grapes.html</loc></url>
