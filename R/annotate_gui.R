@@ -84,7 +84,7 @@ annotate_gui <- function() {
   })
 
   ui <- dashboardPage(
-    dashboardHeader(title = span("textAnnotatoR", class = "brand-text")),
+    dashboardHeader(title = "textAnnotatoR", titleWidth = 250),
     dashboardSidebar(disable = TRUE),
     dashboardBody(
       useShinyjs(),
@@ -93,11 +93,15 @@ annotate_gui <- function() {
                div(style = "margin-bottom: 15px",
                    actionButton("save_project", "Save Project", icon = icon("save")),
                    actionButton("load_project", "Load Project", icon = icon("folder-open")),
-                   actionButton("new_project", "New Project", icon = icon("file"))
+                   actionButton("new_project", "New Project", icon = icon("file")),
+                   div(style = "display: inline-block; margin-left: 15px; border-left: 1px solid #ddd; padding-left: 15px;",
+                       actionButton("export_hierarchy_toolbar", "Export Hierarchy", icon = icon("download")),
+                       actionButton("import_hierarchy_toolbar", "Import Hierarchy", icon = icon("upload"))
+                   )
                )
         ),
         column(4,
-               div(id = "project_status", 
+               div(id = "project_status",
                    style = "margin-bottom: 15px; text-align: right; padding-top: 7px;",
                    uiOutput("project_status_display")
                )
@@ -229,6 +233,14 @@ annotate_gui <- function() {
             height: calc(100% - 40px);
             overflow-y: auto;
           }
+          .main-header .logo {
+            font-family: 'Gamja Flower', sans-serif !important;
+            font-weight: 800 !important;
+            letter-spacing: 1px !important;
+            text-transform: none !important;
+            color: #FFFFFF !important;
+            font-size: 24px !important;
+          }
           .theme-item, .code-item {
             display: inline-block;
             padding: 2px 4px;
@@ -259,24 +271,24 @@ annotate_gui <- function() {
           font-family: monospace;
           line-height: 1.5;
         }
-        
+
         /* Selected item styling */
         .theme-item.selected, .code-item.selected {
           background-color: #e6f3ff;
           border-radius: 3px;
           padding: 2px 4px;
         }
-        
+
         /* Theme item styling */
         .theme-item {
           font-weight: bold;
         }
-        
+
         /* Code item styling */
         .code-item {
           font-style: normal;
         }
-        
+
         /* Description preview styling */
         .description-preview {
           color: #666;
@@ -298,23 +310,23 @@ annotate_gui <- function() {
         $(document).ready(function() {
         // Initialize onclick handlers for themes and codes
         initializeThemeHandlers();
-        
+
         // Function to set up the click handlers
         function initializeThemeHandlers() {
           // Add click handler for theme and code items
           $(document).on('click', '.theme-item, .code-item', function(e) {
             e.preventDefault();
             e.stopPropagation();
-      
+
             // Remove selection from all items
             $('.theme-item, .code-item').removeClass('selected');
-            
+
             // Add selection to clicked item
             $(this).addClass('selected');
-      
+
             // Get the item name - this is the critical part
             var itemName = $(this).data('name');
-            
+
             // Make sure we have a valid name
             if (!itemName) {
               itemName = $(this).text().trim();
@@ -323,11 +335,11 @@ annotate_gui <- function() {
                 itemName = itemName.split(' - ')[0].trim();
               }
             }
-      
+
             // Send the selected item to Shiny
             Shiny.setInputValue('selected_theme', itemName);
           });
-      
+
           // Add hover effects for better UX
           $(document).on('mouseenter', '.theme-item, .code-item', function() {
             $(this).css({
@@ -358,14 +370,14 @@ annotate_gui <- function() {
           Shiny.addCustomMessageHandler('refreshDisplay', function(message) {
             // Clear any lingering highlights
             $('.char').removeClass('highlighted');
-            
+
             // Re-initialize selection handlers
             setTimeout(function() {
               if (typeof initializeSelection === 'function') {
                 initializeSelection();
               }
             }, 100);
-            
+
             // Scroll to top of text display
             $('#text_display').scrollTop(0);
             $('#floating_text_content').scrollTop(0);
@@ -436,20 +448,20 @@ annotate_gui <- function() {
                                 textInput("codebook_new_code", "New Code Name:"),
                                 textAreaInput("codebook_code_description", "Description:", height = "80px"),
                                 actionButton("codebook_create_code", "Create Code",
-                                             icon = icon("plus"), class = "btn-success"),
+                                             icon = icon("plus")),
                                 tags$hr(),
-                                
+
                                 # Code operations with improved instructions
                                 tags$h5("Existing Codes"),
-                                tags$p(class = "text-muted", 
+                                tags$p(class = "text-muted",
                                        "Click on rows to select codes. Hold Ctrl/Cmd to select multiple codes for merging."),
                                 DTOutput("codebook_codes_table"),
                                 tags$br(),
-                                
+
                                 # Selection feedback
                                 uiOutput("selection_feedback"),
                                 tags$br(),
-                                
+
                                 # Action buttons
                                 div(style = "margin-top: 10px;",
                                     actionButton("codebook_rename_code", "Rename Selected",
@@ -457,7 +469,7 @@ annotate_gui <- function() {
                                     actionButton("codebook_delete_code", "Delete Selected",
                                                  icon = icon("trash"), class = "btn-danger"),
                                     actionButton("codebook_merge_codes", "Merge Selected",
-                                                 icon = icon("object-group"), class = "btn-warning")
+                                                 icon = icon("object-group"))
                                 )
                               )
                        ),
@@ -468,7 +480,7 @@ annotate_gui <- function() {
                               ),
                               wellPanel(
                                 tags$h4("Selected Code Details"),
-                                verbatimTextOutput("codebook_selected_details")
+                                uiOutput("codebook_selected_details")
                               )
                        )
                      )
@@ -497,8 +509,8 @@ annotate_gui <- function() {
                                 h4("Theme & Code Hierarchy"),
                                 tags$p("This hierarchy shows the organizational structure of your themes and codes:"),
                                 tags$ul(
-                                  tags$li(HTML("<strong>Themes</strong> (\\U0001F4C2) - Used to group and organize related codes")),
-                                  tags$li(HTML("<strong>Codes</strong> (\\U0001F4C4) - Used to annotate and categorize text segments"))
+                                  tags$li(HTML(paste0("<strong>Themes</strong> (", "&#128194;", ") - Used to group and organize related codes"))),
+                                  tags$li(HTML(paste0("<strong>Codes</strong> (", "&#128196;", ") - Used to annotate and categorize text segments")))
                                 ),
                                 tags$p("Click on any theme or code to see its details."),
                                 uiOutput("hierarchy_view")
@@ -523,14 +535,14 @@ annotate_gui <- function() {
                                 selectInput("cooccurrence_unit",
                                             "Co-occurrence Analysis Unit:",
                                             choices = c("Paragraph" = "paragraph",
-                                                        "Sentence" = "sentence", 
+                                                        "Sentence" = "sentence",
                                                         "Document" = "document"),
                                             selected = "paragraph"),
                                 helpText("Select the analytical unit for co-occurrence analysis:",
                                          tags$br(),
                                          tags$strong("Sentence:"), " Codes appearing in the same sentence",
                                          tags$br(),
-                                         tags$strong("Paragraph:"), " Codes appearing in the same paragraph", 
+                                         tags$strong("Paragraph:"), " Codes appearing in the same paragraph",
                                          tags$br(),
                                          tags$strong("Document:"), " Codes appearing anywhere in the document")
                               )
@@ -636,10 +648,10 @@ annotate_gui <- function() {
     # Note: Added several new storage-related values
     rv <- reactiveValues(
       data_dir = NULL,
-      storage_mode = NULL,        
-      project_specific_dir = NULL, 
-      current_project_path = NULL, 
-      pending_load_path = NULL,    
+      storage_mode = NULL,
+      project_specific_dir = NULL,
+      current_project_path = NULL,
+      pending_load_path = NULL,
       text = "",
       annotations = data.frame(
         start = integer(),
@@ -667,41 +679,41 @@ annotate_gui <- function() {
       comparison_data = NULL,
       comparison_results = NULL
     )
-    
+
     # Initialize roots for shinyFiles
     roots <- c(Home = path.expand("~"))
     if (.Platform$OS.type == "windows") {
       roots <- c(roots, getVolumes()())
     }
-    
+
     # Initialize directory/file choosing
     shinyDirChoose(input, "directory_select", roots = roots, session = session)
     shinyDirChoose(input, "custom_dir_select", roots = roots, session = session)
     shinyDirChoose(input, "text_directory_select", roots = roots, session = session)
     shinyDirChoose(input, "records_directory_select", roots = roots, session = session)
     shinyFileChoose(input, "file_select", roots = roots, session = session)
-    
+
     # Initialize directory with user choice
     observe({
       if (is.null(rv$storage_mode)) {
         init_data_dir(session)
       }
     })
-    
+
     # Handle storage confirmation - fixed by passing output parameter
     handle_storage_confirmation(input, output, rv, session, roots)
-    
+
     # Handle save project confirmation - fixed by passing output parameter
     handle_save_project_confirmation(input, output, session, rv, roots)
-    
+
     # Handle load project confirmation - fixed by passing output parameter
     handle_load_project_confirmation(input, output, session, rv, roots)
-    
+
     # Load Project handler
     observeEvent(input$load_project, {
       load_project_interactive(rv, input, session, roots)
     })
-    
+
     output$current_file_name <- renderText({
       rv$current_file_name
     })
@@ -1001,13 +1013,13 @@ annotate_gui <- function() {
       input$confirm_add_code
       input$confirm_move
       input$confirm_import
-      
+
       # Also react to code changes
       all_codes <- rv$codes
-      
+
       # Generate the hierarchy HTML with all codes information
       hierarchy_html <- visualize_hierarchy(rv$code_tree, all_codes)
-      
+
       # Wrap the HTML in a div with an ID for easy JavaScript targeting
       html_with_wrapper <- paste0(
         '<div id="hierarchy_container">\n',
@@ -1016,7 +1028,7 @@ annotate_gui <- function() {
         '\n</pre>\n',
         '</div>'
       )
-      
+
       # Include JavaScript to initialize handlers after the UI renders
       tagList(
         HTML(html_with_wrapper),
@@ -1026,11 +1038,11 @@ annotate_gui <- function() {
         $('.theme-item, .code-item').on('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
-          
+
           // Clear existing selections
           $('.theme-item, .code-item').removeClass('selected');
           $(this).addClass('selected');
-          
+
           // Get item name and send to Shiny
           var itemName = $(this).data('name');
           if (!itemName) {
@@ -1039,7 +1051,7 @@ annotate_gui <- function() {
               itemName = itemName.split(' - ')[0].trim();
             }
           }
-          
+
           // This is the critical line to update Shiny
           Shiny.setInputValue('selected_theme', itemName);
           console.log('Selected: ' + itemName);
@@ -1056,13 +1068,13 @@ annotate_gui <- function() {
       input$confirm_add_code
       input$confirm_move
       input$confirm_import
-      
+
       # Also react to code changes in rv$codes
       all_codes <- rv$codes
-      
+
       # Calculate stats with all codes information
       stats <- calculate_hierarchy_stats(rv$code_tree, all_codes)
-      
+
       # Format the codes per theme section
       codes_per_theme_text <- if (length(stats$codes_per_theme) > 0) {
         paste("\nCodes per Theme:",
@@ -1073,16 +1085,16 @@ annotate_gui <- function() {
       } else {
         "\nNo user-created themes with codes yet"
       }
-      
+
       # Add information about unassigned codes
       unassigned_codes_text <- if (stats$unassigned_codes > 0) {
         paste0("\nCodes not assigned to any theme: ", stats$unassigned_codes,
-               " (", paste(head(setdiff(rv$codes, get_all_themed_codes(rv$code_tree)), 5), collapse=", "), 
+               " (", paste(head(setdiff(rv$codes, get_all_themed_codes(rv$code_tree)), 5), collapse=", "),
                if(stats$unassigned_codes > 5) "..." else "", ")")
       } else {
         ""
       }
-      
+
       # Combine all statistics
       paste0(
         "Summary:\n",
@@ -1102,54 +1114,54 @@ annotate_gui <- function() {
     output$theme_details <- renderUI({
       # React to theme selection
       theme_name <- input$selected_theme
-      
+
       if (is.null(theme_name)) {
         return(tags$div(
           tags$p("No item selected. Click on a theme or code in the hierarchy to view details."),
           tags$p("In the hierarchy:"),
           tags$ul(
-            tags$li(HTML("<strong>\\U0001F4C2 Folders</strong> represent themes - organizational categories")),
-            tags$li(HTML("<strong>\\U0001F4C4 Files</strong> represent codes - used to annotate text"))
+            tags$li(HTML("<strong>&#128194; Folders</strong> represent themes - organizational categories")),
+            tags$li(HTML("<strong>&#128196; Files</strong> represent codes - used to annotate text"))
           )
         ))
       }
-      
+
       # Special handling for "Unassigned Codes" section
       if (theme_name == "Unassigned Codes") {
         # Get unassigned codes
         all_codes <- rv$codes
         themed_codes <- get_all_themed_codes(rv$code_tree)
         unassigned_codes <- setdiff(all_codes, themed_codes)
-        
+
         return(tags$div(
-          tags$h4(HTML(paste0("\\U0001F4C1 Unassigned Codes Section"))),
+          tags$h4(HTML(paste0("&#128193; Unassigned Codes Section"))),
           tags$p("These codes have been created but are not organized into any theme."),
           tags$p(HTML(paste0("<strong>Number of unassigned codes:</strong> ", length(unassigned_codes)))),
-          
+
           if (length(unassigned_codes) > 0) {
             tags$div(
               tags$h5("Unassigned Codes:"),
               tags$ul(
                 lapply(sort(unassigned_codes), function(code) {
-                  tags$li(HTML(paste0("\\U0001F4C4 ", code)))
+                  tags$li(HTML(paste0("&#128196; ", code)))
                 })
               )
             )
           }
         ))
       }
-      
+
       # Check if this is a code not in the hierarchy
       selected_node <- find_node_by_name(rv$code_tree, theme_name)
-      
+
       # If not found in the hierarchy, check if it's one of the unassigned codes
       if (is.null(selected_node) && theme_name %in% rv$codes) {
         # Count annotations using this code
         n_annotations <- sum(rv$annotations$code == theme_name, na.rm = TRUE)
-        
+
         # For unassigned codes
         return(tags$div(
-          tags$h4(HTML(paste0("\\U0001F4C4 Unassigned Code: ", tags$strong(theme_name)))),
+          tags$h4(HTML(paste0("&#128196; Unassigned Code: ", tags$strong(theme_name)))),
           tags$p(HTML("<strong>Status:</strong> Not organized in any theme")),
           tags$p(HTML(paste0("<strong>Used in:</strong> ", n_annotations, " annotations"))),
           tags$div(
@@ -1157,17 +1169,17 @@ annotate_gui <- function() {
           )
         ))
       }
-      
+
       if (is.null(selected_node)) {
         return(tags$p(paste("Item", theme_name, "not found in hierarchy.")))
       }
-      
+
       # Determine if this is a theme or a code
       node_type <- if (!is.null(selected_node$type)) selected_node$type else "unknown"
-      
+
       if (node_type == "theme") {
         # For themes, show theme-specific information
-        
+
         # Count direct codes and sub-themes with proper error handling
         n_codes <- sum(vapply(selected_node$children, function(x) {
           tryCatch({
@@ -1175,14 +1187,14 @@ annotate_gui <- function() {
             x$type == "code"
           }, error = function(e) FALSE)
         }, logical(1)))
-        
+
         n_subthemes <- sum(vapply(selected_node$children, function(x) {
           tryCatch({
             if (is.null(x$type)) return(FALSE)
             x$type == "theme"
           }, error = function(e) FALSE)
         }, logical(1)))
-        
+
         # Format the created timestamp safely
         created_time <- tryCatch({
           if (!is.null(selected_node$created)) {
@@ -1191,7 +1203,7 @@ annotate_gui <- function() {
             format(Sys.time(), "%Y-%m-%d %H:%M:%S")
           }
         }, error = function(e) format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
-        
+
         # Safe description handling
         description <- tryCatch({
           if (!is.null(selected_node$description)) {
@@ -1200,7 +1212,7 @@ annotate_gui <- function() {
             "No description"
           }
         }, error = function(e) "No description")
-        
+
         # Get the path
         path <- if (selected_node$name == "Root") {
           "Root (top level)"
@@ -1209,15 +1221,15 @@ annotate_gui <- function() {
             paste(selected_node$path, collapse = " / ")
           }, error = function(e) selected_node$name)
         }
-        
+
         # For themes, show theme information
         return(tags$div(
-          tags$h4(HTML(paste0("\\U0001F4C2 Theme: ", tags$strong(selected_node$name)))),
+          tags$h4(HTML(paste0("&#128194; Theme: ", tags$strong(selected_node$name)))),
           tags$p(HTML(paste0("<strong>Path:</strong> ", path))),
           tags$p(HTML(paste0("<strong>Description:</strong> ", description))),
           tags$p(HTML(paste0("<strong>Created:</strong> ", created_time))),
           tags$p(HTML(paste0("<strong>Contains:</strong> ", n_codes, " codes, ", n_subthemes, " sub-themes"))),
-          
+
           # Add code list if there are codes
           if (n_codes > 0) {
             codes <- tryCatch({
@@ -1226,19 +1238,19 @@ annotate_gui <- function() {
                 x$type == "code"
               }, logical(1))], function(x) x$name, character(1))
             }, error = function(e) character(0))
-            
+
             if (length(codes) > 0) {
               tags$div(
                 tags$h5("Codes in this theme:"),
                 tags$ul(
                   lapply(codes, function(code) {
-                    tags$li(HTML(paste0("\\U0001F4C4 ", code)))
+                    tags$li(HTML(paste0("&#128196; ", code)))
                   })
                 )
               )
             }
           },
-          
+
           # Add sub-themes list if there are sub-themes
           if (n_subthemes > 0) {
             subthemes <- tryCatch({
@@ -1247,13 +1259,13 @@ annotate_gui <- function() {
                 x$type == "theme"
               }, logical(1))], function(x) x$name, character(1))
             }, error = function(e) character(0))
-            
+
             if (length(subthemes) > 0) {
               tags$div(
                 tags$h5("Sub-themes:"),
                 tags$ul(
                   lapply(subthemes, function(theme) {
-                    tags$li(HTML(paste0("\\U0001F4C2 ", theme)))
+                    tags$li(HTML(paste0("&#128194; ", theme)))
                   })
                 )
               )
@@ -1262,7 +1274,7 @@ annotate_gui <- function() {
         ))
       } else if (node_type == "code") {
         # For codes, show code-specific information
-        
+
         # Format the created timestamp safely
         created_time <- tryCatch({
           if (!is.null(selected_node$created)) {
@@ -1271,7 +1283,7 @@ annotate_gui <- function() {
             format(Sys.time(), "%Y-%m-%d %H:%M:%S")
           }
         }, error = function(e) format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
-        
+
         # Safe description handling
         description <- tryCatch({
           if (!is.null(selected_node$description)) {
@@ -1280,7 +1292,7 @@ annotate_gui <- function() {
             "No description"
           }
         }, error = function(e) "No description")
-        
+
         # Get the parent theme
         parent_theme <- tryCatch({
           if (!is.null(selected_node$parent)) {
@@ -1289,18 +1301,18 @@ annotate_gui <- function() {
             "Unknown"
           }
         }, error = function(e) "Unknown")
-        
+
         # Get the path
         path <- tryCatch({
           paste(selected_node$path, collapse = " / ")
         }, error = function(e) selected_node$name)
-        
+
         # Count annotations using this code
         n_annotations <- sum(rv$annotations$code == selected_node$name, na.rm = TRUE)
-        
+
         # For codes, show code information
         return(tags$div(
-          tags$h4(HTML(paste0("\\U0001F4C4 Code: ", tags$strong(selected_node$name)))),
+          tags$h4(HTML(paste0("&#128196; Code: ", tags$strong(selected_node$name)))),
           tags$p(HTML(paste0("<strong>Path:</strong> ", path))),
           tags$p(HTML(paste0("<strong>Parent Theme:</strong> ", parent_theme))),
           tags$p(HTML(paste0("<strong>Description:</strong> ", description))),
@@ -1312,22 +1324,22 @@ annotate_gui <- function() {
         return(tags$p(paste("Selected item", theme_name, "has unknown type:", node_type)))
       }
     })
-    
+
     # Codebook table output
     output$codebook_codes_table <- renderDT({
       # Force reactivity on codes and annotations changes
       rv$codes
       rv$annotations
       rv$code_colors
-      
+
       if (length(rv$codes) > 0) {
         code_usage <- sapply(rv$codes, function(code) {
           sum(rv$annotations$code == code, na.rm = TRUE)
         })
-        
+
         colors <- rv$code_colors[rv$codes]
         colors[is.na(colors)] <- "#CCCCCC"  # Default color for codes without colors
-        
+
         data.frame(
           Code = rv$codes,
           Usage = code_usage,
@@ -1345,13 +1357,13 @@ annotate_gui <- function() {
       columnDefs = list(
         list(targets = 2, visible = FALSE)  # Hide the Color column but keep it in data
       )
-    ), selection = list(mode = 'multiple', target = 'row')) 
-    
+    ), selection = list(mode = 'multiple', target = 'row'))
+
     output$codebook_usage_stats <- renderDT({
       # Force reactivity
       rv$annotations
       rv$codes
-      
+
       if (length(rv$codes) > 0 && nrow(rv$annotations) > 0) {
         # Calculate statistics for each code
         code_stats_list <- lapply(rv$codes, function(code) {
@@ -1368,13 +1380,13 @@ annotate_gui <- function() {
             stringsAsFactors = FALSE
           )
         })
-        
+
         # Combine all statistics
         stats_df <- do.call(rbind, code_stats_list)
-        
+
         # Sort by count descending
         stats_df <- stats_df[order(stats_df$Count, decreasing = TRUE), ]
-        
+
         return(stats_df)
       } else {
         data.frame(
@@ -1385,107 +1397,123 @@ annotate_gui <- function() {
         )
       }
     }, options = list(pageLength = 10, searching = FALSE))
-    
-    output$codebook_selected_details <- renderText({
+
+    output$codebook_selected_details <- renderUI({
       # Force reactivity
       rv$codes
       rv$code_tree
       rv$code_colors
-      
+
       selected_rows <- input$codebook_codes_table_rows_selected
-      
+
       # Handle no selection
       if (is.null(selected_rows) || length(selected_rows) == 0) {
-        return("Select a code from the table above to view details.\n\nClick on any row in the 'Existing Codes' table to see detailed information about that code.")
+        return(tags$pre(
+          "Click on any row in the 'Existing Codes' table to see detailed information about that code."
+        ))
       }
-      
+
       # Handle single selection
       if (length(selected_rows) == 1 && selected_rows[1] <= length(rv$codes)) {
         selected_code <- rv$codes[selected_rows[1]]
-        
+
         # Get code info from hierarchy if available
         code_node <- find_node_by_name(rv$code_tree, selected_code)
-        
+
         description <- if (!is.null(code_node) && !is.null(code_node$description) && code_node$description != "") {
           code_node$description
         } else {
           "No description available"
         }
-        
+
         created <- if (!is.null(code_node) && !is.null(code_node$created)) {
           format(code_node$created, "%Y-%m-%d %H:%M:%S")
         } else {
           "Unknown"
         }
-        
+
         # Get usage count
         usage_count <- sum(rv$annotations$code == selected_code, na.rm = TRUE)
-        
+
         # Get color
         code_color <- rv$code_colors[selected_code]
         if (is.null(code_color) || is.na(code_color)) {
           code_color <- "Not assigned"
+          color_display <- "Not assigned"
+        } else {
+          color_display <- tags$span(
+            tags$span(style = paste0("display: inline-block; width: 20px; height: 20px; background-color: ", code_color, "; border: 1px solid #ccc; vertical-align: middle; margin-right: 5px;")),
+            code_color
+          )
         }
-        
-        # Build details string
-        details <- paste0(
-          "Selected Code: ", selected_code, "\n\n",
-          "Description: ", description, "\n\n",
-          "Usage Count: ", usage_count, " annotation(s)\n\n",
-          "Color: ", code_color, "\n\n",
-          "Created: ", created
-        )
-        
-        return(details)
+
+        return(tags$div(
+          tags$p(tags$strong("Selected Code: "), selected_code),
+          tags$p(tags$strong("Description: "), description),
+          tags$p(tags$strong("Usage Count: "), usage_count, " annotation(s)"),
+          tags$p(tags$strong("Color: "), color_display),
+          tags$p(tags$strong("Created: "), created)
+        ))
       }
-      
+
       # Handle multiple selections
       if (length(selected_rows) > 1) {
         selected_codes <- rv$codes[selected_rows[selected_rows <= length(rv$codes)]]
-        
+
         if (length(selected_codes) == 0) {
-          return("Invalid selection. Please select valid codes from the table.")
+          return(tags$pre("Invalid selection. Please select valid codes from the table."))
         }
-        
+
         # Calculate statistics for multiple codes
         total_usage <- sum(sapply(selected_codes, function(code) {
           sum(rv$annotations$code == code, na.rm = TRUE)
         }))
-        
+
         # Get colors for selected codes
         code_colors <- sapply(selected_codes, function(code) {
           color <- rv$code_colors[code]
           if (is.null(color) || is.na(color)) "Not assigned" else color
         })
-        
+
         # Build summary for multiple codes
-        details <- paste0(
-          "Multiple Codes Selected: ", length(selected_codes), " codes\n\n",
-          "Selected Codes:\n",
-          paste(sapply(seq_along(selected_codes), function(i) {
-            code <- selected_codes[i]
-            usage <- sum(rv$annotations$code == code, na.rm = TRUE)
-            color <- code_colors[i]
-            paste0("  - ", code, " (", usage, " annotations, color: ", color, ")")
-          }), collapse = "\n"), "\n\n",
-          "Total Combined Usage: ", total_usage, " annotation(s)\n\n",
-          "Actions Available:\n",
-          "  - Rename Selected: Rename one of the selected codes\n",
-          "  - Delete Selected: Delete all selected codes\n",
-          "  - Merge Selected: Combine all codes into a single new code"
-        )
-        
-        return(details)
+        return(tags$div(
+          tags$p(tags$strong("Multiple Codes Selected: "), length(selected_codes), " codes"),
+          tags$p(tags$strong("Selected Codes:")),
+          tags$ul(
+            lapply(seq_along(selected_codes), function(i) {
+              code <- selected_codes[i]
+              usage <- sum(rv$annotations$code == code, na.rm = TRUE)
+              color <- code_colors[i]
+
+              color_display <- if (color != "Not assigned") {
+                tagList(
+                  tags$span(style = paste0("display: inline-block; width: 15px; height: 15px; background-color: ", color, "; border: 1px solid #ccc; vertical-align: middle; margin-right: 5px;")),
+                  color
+                )
+              } else {
+                "Not assigned"
+              }
+
+              tags$li(
+                tags$strong(code), " (", usage, " annotations, color: ", color_display, ")"
+              )
+            })
+          ),
+          tags$p(tags$strong("Total Combined Usage: "), total_usage, " annotation(s)"),
+          tags$p(tags$strong("Actions Available:")),
+          tags$ul(
+            tags$li("Rename Selected: Rename one of the selected codes"),
+            tags$li("Delete Selected: Delete all selected codes"),
+            tags$li("Merge Selected: Combine all codes into a single new code")
+          )
+        ))
       }
-      
-      # Fallback for any other case
-      return("Please select one or more codes from the table to view details.")
     })
-    
+
     # Selection feedback output
     output$selection_feedback <- renderUI({
       selected_rows <- input$codebook_codes_table_rows_selected
-      
+
       if (is.null(selected_rows) || length(selected_rows) == 0) {
         tags$div(
           class = "alert alert-info",
@@ -1637,17 +1665,17 @@ annotate_gui <- function() {
             history = rv$history,
             history_index = rv$history_index
           )
-          
+
           # Add project directory info if in project-specific mode
           if (!is.null(rv$storage_mode) && rv$storage_mode == "project" && !is.null(rv$project_specific_dir)) {
             project_state$project_dir <- rv$project_specific_dir
           }
-          
+
           # Save to existing location
           saveRDS(project_state, file = rv$current_project_path)
           rv$project_modified <- FALSE
           showNotification(paste("Project saved to", rv$current_project_path), type = "message")
-          
+
         }, error = function(e) {
           showNotification(paste("Error saving project:", e$message), type = "error")
           # If quick save fails, fall back to save dialog
@@ -1658,24 +1686,24 @@ annotate_gui <- function() {
         save_project_interactive(rv, input, session, roots)
       }
     })
-    
+
     observeEvent(input$remove_annotation, {
       rv <- remove_annotation(rv,
                               input$remove_annotation$start,
                               input$remove_annotation$end,
                               input$remove_annotation$code)
-      
+
       # Update UI
       output$text_display <- renderUI({
         HTML(update_text_display())
       })
-      
+
       showNotification("Annotation removed", type = "message")
     })
-    
+
     observeEvent(input$save_as_project, {
       req(input$project_name)
-      
+
       # Determine save location based on storage mode
       if (!is.null(rv$storage_mode) && rv$storage_mode == "custom") {
         project_dir <- get_project_dir(rv)
@@ -1683,7 +1711,7 @@ annotate_gui <- function() {
         # Default location
         project_dir <- get_project_dir()
       }
-      
+
       # Construct full filepath
       filename <- if (!grepl("\\.rds$", input$project_name)) {
         paste0(input$project_name, ".rds")
@@ -1691,7 +1719,7 @@ annotate_gui <- function() {
         input$project_name
       }
       filepath <- file.path(project_dir, filename)
-      
+
       # Create project state
       project_state <- list(
         text = rv$text,
@@ -1704,7 +1732,7 @@ annotate_gui <- function() {
         history = rv$history,
         history_index = rv$history_index
       )
-      
+
       # Save project
       tryCatch({
         saveRDS(project_state, file = filepath)
@@ -1715,7 +1743,7 @@ annotate_gui <- function() {
       }, error = function(e) {
         showNotification(paste("Error saving project:", e$message), type = "error")
       })
-      
+
       removeModal()
     })
 
@@ -1739,7 +1767,7 @@ annotate_gui <- function() {
         parseDirPath(roots, input$records_directory_select)
       }
     })
-    
+
     # Project status display
     output$project_status_display <- renderUI({
       if (is.null(rv$current_project) || rv$current_project == "") {
@@ -1754,7 +1782,7 @@ annotate_gui <- function() {
         status_color <- if (rv$project_modified) "#f39c12" else "#27ae60"  # Orange if modified, green if saved
         status_icon <- if (rv$project_modified) "circle" else "check-circle"
         status_text <- if (rv$project_modified) "unsaved changes" else "saved"
-        
+
         tags$span(
           style = paste0("color: ", status_color, "; font-weight: 500;"),
           icon(status_icon, style = paste0("color: ", status_color, "; margin-right: 5px;")),
@@ -1767,7 +1795,7 @@ annotate_gui <- function() {
         )
       }
     })
-    
+
     # This ensures that when input$selected_theme changes, it gets stored in rv$selected_theme
     observeEvent(input$selected_theme, {
       if (!is.null(input$selected_theme) && input$selected_theme != "") {
@@ -1796,7 +1824,7 @@ annotate_gui <- function() {
     # Add this observer for handling code merging
     observeEvent(input$confirm_merge_codes, {
       req(input$codes_to_merge, input$new_code_name)
-      
+
       # Create merge action
       merge_action <- create_action(
         type = "merge_codes",
@@ -1805,80 +1833,80 @@ annotate_gui <- function() {
           new_code = input$new_code_name
         )
       )
-      
+
       # Store old colors before merge
       old_colors <- list()
       for (code in input$codes_to_merge) {
         old_colors[[code]] <- rv$code_colors[code]
       }
       merge_action$data$old_colors <- old_colors
-      
+
       # Apply and record the action
       apply_action(rv, merge_action)
       add_action(rv, merge_action)
-      
+
       # Update codes list
       rv$codes <- unique(c(setdiff(rv$codes, input$codes_to_merge), input$new_code_name))
-      
+
       # Assign color to the new merged code
       used_colors <- as.character(rv$code_colors)
       new_color <- get_next_palette_color(used_colors)
-      
+
       # If color already exists, generate a new readable one
       if (new_color %in% used_colors) {
         new_color <- generate_readable_color()
-        
+
         attempts <- 0
         while (!is_color_readable(new_color) && attempts < 10) {
           new_color <- generate_readable_color()
           attempts <- attempts + 1
         }
-        
+
         if (!is_color_readable(new_color)) {
           safe_colors <- c("#FFE6CC", "#E6F3FF", "#E6FFE6", "#FFE6F3", "#F3E6FF")
           new_color <- sample(safe_colors, 1)
         }
       }
-      
+
       rv$code_colors[input$new_code_name] <- new_color
-      
+
       # Remove old code colors
       rv$code_colors <- rv$code_colors[!names(rv$code_colors) %in% input$codes_to_merge]
-      
+
       removeModal()
       showNotification(paste("Codes merged into", input$new_code_name), type = "message")
-      
+
       # Update UI
       output$text_display <- renderUI({
         HTML(update_text_display())
       })
     })
-    
+
     observe({
       if (length(rv$code_colors) > 0) {
         rv <- update_dark_colors(rv)
       }
     }, priority = 999)  # High priority to run early
-    
+
     # Codebook merge codes handler
     observeEvent(input$codebook_merge_codes, {
       selected_rows <- input$codebook_codes_table_rows_selected
-      
+
       if (is.null(selected_rows) || length(selected_rows) == 0) {
-        showNotification("Please select codes from the table first. Click on table rows to select them.", 
+        showNotification("Please select codes from the table first. Click on table rows to select them.",
                          type = "warning", duration = 5)
         return()
       }
-      
+
       if (length(selected_rows) < 2) {
-        showNotification("Please select at least 2 codes to merge. Hold Ctrl/Cmd and click to select multiple rows.", 
+        showNotification("Please select at least 2 codes to merge. Hold Ctrl/Cmd and click to select multiple rows.",
                          type = "warning", duration = 5)
         return()
       }
-      
+
       # Get the selected codes from the table
       selected_codes <- rv$codes[selected_rows]
-      
+
       showModal(modalDialog(
         title = "Merge Selected Codes",
         size = "m",
@@ -1890,50 +1918,50 @@ annotate_gui <- function() {
               usage_count <- sum(rv$annotations$code == code, na.rm = TRUE)
               tags$div(
                 style = "margin: 5px 0;",
-                tags$strong(code), 
+                tags$strong(code),
                 tags$span(class = "text-muted", paste0(" (", usage_count, " annotations)"))
               )
             })
           ),
-          tags$p(class = "text-info", 
-                 icon("info-circle"), 
+          tags$p(class = "text-info",
+                 icon("info-circle"),
                  " All annotations with these codes will be updated to use the new merged code name."),
-          textInput("codebook_new_code_name", "New merged code name:", 
+          textInput("codebook_new_code_name", "New merged code name:",
                     placeholder = "Enter name for the merged code"),
-          textAreaInput("codebook_merged_description", "Description for merged code:", 
+          textAreaInput("codebook_merged_description", "Description for merged code:",
                         height = "80px", placeholder = "Optional description for the new code")
         ),
         footer = tagList(
           modalButton("Cancel"),
-          actionButton("confirm_codebook_merge", "Merge Codes", 
+          actionButton("confirm_codebook_merge", "Merge Codes",
                        class = "btn-primary", icon = icon("object-group"))
         )
       ))
     })
-    
+
     # Handle codebook merge confirmation
     observeEvent(input$confirm_codebook_merge, {
       req(input$codebook_new_code_name)
-      
+
       selected_rows <- input$codebook_codes_table_rows_selected
       if (length(selected_rows) < 2) {
         showNotification("Please select at least 2 codes to merge", type = "error")
         return()
       }
-      
+
       selected_codes <- rv$codes[selected_rows]
       new_code_name <- trimws(input$codebook_new_code_name)
-      
+
       if (nchar(new_code_name) == 0) {
         showNotification("Please enter a valid code name", type = "warning")
         return()
       }
-      
+
       if (new_code_name %in% rv$codes && !new_code_name %in% selected_codes) {
         showNotification("A code with that name already exists", type = "error")
         return()
       }
-      
+
       tryCatch({
         # Create merge action for undo/redo system
         merge_action <- create_action(
@@ -1943,47 +1971,47 @@ annotate_gui <- function() {
             new_code = new_code_name
           )
         )
-        
+
         # Store old colors before merge
         old_colors <- list()
         for (code in selected_codes) {
           old_colors[[code]] <- rv$code_colors[code]
         }
         merge_action$data$old_colors <- old_colors
-        
+
         # Update all annotations that use the old codes
         for (old_code in selected_codes) {
           rv$annotations$code[rv$annotations$code == old_code] <- new_code_name
         }
-        
+
         # Update codes list - remove old codes and add new one
         rv$codes <- unique(c(setdiff(rv$codes, selected_codes), new_code_name))
-        
+
         # Assign color to the new merged code
         used_colors <- as.character(rv$code_colors)
         new_color <- get_next_palette_color(used_colors)
-        
+
         # If color already exists, generate a new readable one
         if (new_color %in% used_colors) {
           new_color <- generate_readable_color()
-          
+
           attempts <- 0
           while (!is_color_readable(new_color) && attempts < 10) {
             new_color <- generate_readable_color()
             attempts <- attempts + 1
           }
-          
+
           if (!is_color_readable(new_color)) {
             safe_colors <- c("#FFE6CC", "#E6F3FF", "#E6FFE6", "#FFE6F3", "#F3E6FF")
             new_color <- sample(safe_colors, 1)
           }
         }
-        
+
         rv$code_colors[new_code_name] <- new_color
-        
+
         # Remove old code colors
         rv$code_colors <- rv$code_colors[!names(rv$code_colors) %in% selected_codes]
-        
+
         # Update hierarchy - remove old codes and add new one
         for (old_code in selected_codes) {
           old_code_node <- find_node_by_name(rv$code_tree, old_code)
@@ -1991,7 +2019,7 @@ annotate_gui <- function() {
             old_code_node$parent$RemoveChild(old_code)
           }
         }
-        
+
         # Add new merged code to root if not already in hierarchy
         if (!code_exists_in_hierarchy(rv$code_tree, new_code_name)) {
           new_code_node <- rv$code_tree$AddChild(new_code_name)
@@ -1999,47 +2027,47 @@ annotate_gui <- function() {
           new_code_node$description <- input$codebook_merged_description %||% ""
           new_code_node$created <- Sys.time()
         }
-        
+
         # Record the action for undo/redo
         add_action(rv, merge_action)
-        
+
         # Mark project as modified
         rv$project_modified <- TRUE
-        
+
         removeModal()
         showNotification(paste("Successfully merged", length(selected_codes), "codes into", new_code_name), type = "message")
-        
+
         # Update text display to reflect the merge
         output$text_display <- renderUI({
           HTML(update_text_display())
         })
-        
+
       }, error = function(e) {
         showNotification(paste("Error merging codes:", e$message), type = "error")
       })
     })
-    
+
     # Update code to handle color assignment during code creation in the codebook
     # Codebook code creation
     observeEvent(input$codebook_create_code, {
       req(input$codebook_new_code)
-      
+
       new_code <- trimws(input$codebook_new_code)
-      
+
       if (nchar(new_code) == 0) {
         showNotification("Please enter a valid code name", type = "warning")
         return()
       }
-      
+
       if (!new_code %in% rv$codes) {
         # Add to codes list
         rv$codes <- c(rv$codes, new_code)
-        
+
         # Assign color
         used_colors <- as.character(rv$code_colors)
         new_color <- get_next_palette_color(used_colors)
         rv$code_colors[new_code] <- new_color
-        
+
         # Add to hierarchy if not exists
         if (!code_exists_in_hierarchy(rv$code_tree, new_code)) {
           new_code_node <- rv$code_tree$AddChild(new_code)
@@ -2047,37 +2075,37 @@ annotate_gui <- function() {
           new_code_node$description <- input$codebook_code_description %||% ""
           new_code_node$created <- Sys.time()
         }
-        
+
         # Clear inputs
         updateTextInput(session, "codebook_new_code", value = "")
         updateTextAreaInput(session, "codebook_code_description", value = "")
-        
+
         showNotification(paste("Code '", new_code, "' created successfully"), type = "message")
       } else {
         showNotification("Code already exists", type = "warning")
       }
     })
-    
+
     observeEvent(input$codebook_rename_code, {
       selected_rows <- input$codebook_codes_table_rows_selected
-      
+
       if (is.null(selected_rows) || length(selected_rows) == 0) {
         showNotification("Please select a code to rename", type = "warning")
         return()
       }
-      
+
       if (length(selected_rows) > 1) {
         showNotification("Please select only one code to rename. Use 'Merge Selected' to combine multiple codes.", type = "warning")
         return()
       }
-      
+
       if (selected_rows[1] > length(rv$codes)) {
         showNotification("Invalid selection", type = "error")
         return()
       }
-      
+
       selected_code <- rv$codes[selected_rows[1]]
-      
+
       showModal(modalDialog(
         title = "Rename Code",
         textInput("new_code_name_codebook", "New code name:", value = selected_code),
@@ -2087,64 +2115,64 @@ annotate_gui <- function() {
         )
       ))
     })
-    
+
     # Handle rename confirmation
     observeEvent(input$confirm_rename_codebook, {
       req(input$new_code_name_codebook)
-      
+
       selected_row <- input$codebook_codes_table_rows_selected
       if (length(selected_row) > 0 && length(rv$codes) >= selected_row) {
         old_code <- rv$codes[selected_row]
         new_code <- trimws(input$new_code_name_codebook)
-        
+
         if (new_code != old_code && !new_code %in% rv$codes) {
           # Update codes list
           rv$codes[selected_row] <- new_code
-          
+
           # Update annotations
           rv$annotations$code[rv$annotations$code == old_code] <- new_code
-          
+
           # Update colors
           rv$code_colors[new_code] <- rv$code_colors[old_code]
           rv$code_colors <- rv$code_colors[names(rv$code_colors) != old_code]
-          
+
           # Update hierarchy
           code_node <- find_node_by_name(rv$code_tree, old_code)
           if (!is.null(code_node)) {
             code_node$name <- new_code
           }
-          
+
           showNotification(paste("Code renamed from '", old_code, "' to '", new_code, "'"), type = "message")
         } else if (new_code %in% rv$codes) {
           showNotification("A code with that name already exists", type = "error")
         }
       }
-      
+
       removeModal()
     })
-    
+
     observeEvent(input$codebook_delete_code, {
       selected_rows <- input$codebook_codes_table_rows_selected
-      
+
       if (is.null(selected_rows) || length(selected_rows) == 0) {
         showNotification("Please select code(s) to delete", type = "warning")
         return()
       }
-      
+
       # Filter out invalid selections
       valid_rows <- selected_rows[selected_rows <= length(rv$codes)]
       if (length(valid_rows) == 0) {
         showNotification("Invalid selection", type = "error")
         return()
       }
-      
+
       selected_codes <- rv$codes[valid_rows]
-      
+
       # Calculate total usage count
       total_usage <- sum(sapply(selected_codes, function(code) {
         sum(rv$annotations$code == code, na.rm = TRUE)
       }))
-      
+
       # Create appropriate warning message
       if (length(selected_codes) == 1) {
         warning_text <- paste("Are you sure you want to delete the code '", selected_codes[1], "'?")
@@ -2161,7 +2189,7 @@ annotate_gui <- function() {
           warning_text <- paste0(warning_text, "\n\nThese codes are not currently used in any annotations.")
         }
       }
-      
+
       showModal(modalDialog(
         title = if (length(selected_codes) == 1) "Delete Code" else "Delete Multiple Codes",
         tags$p(warning_text),
@@ -2174,27 +2202,27 @@ annotate_gui <- function() {
         )
       ))
     })
-    
+
     # Handle delete confirmation
     observeEvent(input$confirm_delete_codebook, {
       selected_rows <- input$codebook_codes_table_rows_selected
-      
+
       if (!is.null(selected_rows) && length(selected_rows) > 0) {
         # Filter out invalid selections
         valid_rows <- selected_rows[selected_rows <= length(rv$codes)]
-        
+
         if (length(valid_rows) > 0) {
           codes_to_delete <- rv$codes[valid_rows]
-          
+
           # Remove from annotations
           rv$annotations <- rv$annotations[!rv$annotations$code %in% codes_to_delete, ]
-          
+
           # Remove from codes list
           rv$codes <- rv$codes[-valid_rows]
-          
+
           # Remove colors
           rv$code_colors <- rv$code_colors[!names(rv$code_colors) %in% codes_to_delete]
-          
+
           # Remove from hierarchy
           for (code_to_delete in codes_to_delete) {
             code_node <- find_node_by_name(rv$code_tree, code_to_delete)
@@ -2202,19 +2230,19 @@ annotate_gui <- function() {
               code_node$parent$RemoveChild(code_to_delete)
             }
           }
-          
+
           # Mark project as modified
           rv$project_modified <- TRUE
-          
+
           showNotification(paste(length(codes_to_delete), "code(s) deleted successfully"), type = "message")
-          
+
           # Update text display
           output$text_display <- renderUI({
             HTML(update_text_display())
           })
         }
       }
-      
+
       removeModal()
     })
 
@@ -2223,11 +2251,11 @@ annotate_gui <- function() {
       if (nrow(rv$annotations) == 0) {
         return(paste0("<span class='char' id='char_", 1:nchar(rv$text), "'>", strsplit(rv$text, "")[[1]], "</span>", collapse = ""))
       }
-      
+
       sorted_annotations <- rv$annotations[order(rv$annotations$start), ]
       displayed_text <- ""
       last_end <- 0
-      
+
       for (i in 1:nrow(sorted_annotations)) {
         if (sorted_annotations$start[i] > last_end + 1) {
           displayed_text <- paste0(displayed_text,
@@ -2235,18 +2263,18 @@ annotate_gui <- function() {
                                           strsplit(substr(rv$text, last_end + 1, sorted_annotations$start[i] - 1), "")[[1]],
                                           "</span>", collapse = ""))
         }
-        
+
         # Get color for this code with improved fallback
         code_color <- rv$code_colors[sorted_annotations$code[i]]
         if (is.null(code_color) || length(code_color) == 0) {
           code_color <- "#FFE6CC"  # Use a readable default color if not found
         }
-        
+
         # Check if the color is readable, if not use a safe default
         if (!is_color_readable(code_color)) {
           code_color <- "#FFE6CC"
         }
-        
+
         displayed_text <- paste0(displayed_text,
                                  "<span class='code-display' style='background-color: ", code_color, ";' data-code='", sorted_annotations$code[i], "' data-start='", sorted_annotations$start[i], "' data-end='", sorted_annotations$end[i], "'>",
                                  "[", sorted_annotations$code[i], "]",
@@ -2256,14 +2284,14 @@ annotate_gui <- function() {
                                  "</span>")
         last_end <- sorted_annotations$end[i]
       }
-      
+
       if (last_end < nchar(rv$text)) {
         displayed_text <- paste0(displayed_text,
                                  paste0("<span class='char' id='char_", (last_end + 1):nchar(rv$text), "'>",
                                         strsplit(substr(rv$text, last_end + 1, nchar(rv$text)), "")[[1]],
                                         "</span>", collapse = ""))
       }
-      
+
       return(displayed_text)
     }
 
@@ -2455,23 +2483,23 @@ annotate_gui <- function() {
     observe({
       # Preserve line breaks in the floating text content
       text_with_linebreaks <- gsub("\n", "<br>", rv$text)
-      
+
       # Split by <br> tags
       text_parts <- strsplit(text_with_linebreaks, "<br>")[[1]]
       result <- character(length(text_parts))
-      
+
       # Process each line separately
       for (i in seq_along(text_parts)) {
         line_chars <- strsplit(text_parts[i], "")[[1]]
         # Calculate the character offset for this line
         char_offset <- ifelse(i == 1, 0, sum(nchar(text_parts[1:(i-1)])) + (i-1))
         char_indices <- char_offset + 1:length(line_chars)
-        
+
         # Create spans for each character with correct indices
-        result[i] <- paste0("<span class='char' id='float_char_", char_indices, "'>", 
+        result[i] <- paste0("<span class='char' id='float_char_", char_indices, "'>",
                             line_chars, "</span>", collapse = "")
       }
-      
+
       # Join the lines with <br> tags
       rv$floating_text_content <- paste(result, collapse = "<br>")
     })
@@ -2492,9 +2520,9 @@ annotate_gui <- function() {
     # Save project confirmation handler
     observeEvent(input$confirm_save_project, {
       req(input$project_name)
-      
+
       # ... existing save logic ...
-      
+
       # After successful save, check if we need to import
       if (!is.null(rv$import_after_save) && rv$import_after_save) {
         rv$import_after_save <- NULL  # Clear the flag
@@ -2515,24 +2543,24 @@ annotate_gui <- function() {
     # Load project confirmation handler
     observeEvent(input$confirm_load_project, {
       req(input$file_select)
-      
+
       # Get selected file path
       selected <- parseFilePaths(roots, input$file_select)
       if (nrow(selected) == 0) return()
       filepath <- as.character(selected$datapath[1])
-      
+
       tryCatch({
         project_state <- readRDS(filepath)
-        
+
         # Update all reactive values with loaded state
         rv$text <- project_state$text
         rv$annotations <- project_state$annotations
-        
+
         # Handle annotations that don't have source_file column (backward compatibility)
         if (!"source_file" %in% colnames(rv$annotations) && nrow(rv$annotations) > 0) {
           rv$annotations$source_file <- "Legacy Import"
         }
-        
+
         rv$codes <- project_state$codes
         rv$code_tree <- project_state$code_tree
         rv$code_colors <- project_state$code_colors
@@ -2543,22 +2571,22 @@ annotate_gui <- function() {
         rv$current_project <- basename(filepath)
         rv$current_file_name <- project_state$current_file_name  # Restore current file name
         rv$project_modified <- FALSE
-        
+
         # SYNC CODES WITH HIERARCHY AFTER LOADING
         rv <- sync_codes_with_hierarchy(rv)
-        
+
         # UPDATE ANY DARK COLORS AFTER LOADING
         rv <- update_dark_colors(rv)
-        
+
         # Update UI elements
         updateTextAreaInput(session, "text_input", value = rv$text)
         session$sendCustomMessage("clearSelection", list())
-        
+
         showNotification("Project loaded successfully", type = "message")
       }, error = function(e) {
         showNotification(paste("Error loading project:", e$message), type = "error")
       })
-      
+
       removeModal()
     })
 
@@ -2597,7 +2625,7 @@ annotate_gui <- function() {
         rv$project_modified <- TRUE
       }
     }, priority = 1000)
-    
+
     # Add New Project functionality
     observeEvent(input$new_project, {
       if (rv$project_modified) {
@@ -2655,7 +2683,7 @@ annotate_gui <- function() {
 
     observeEvent(input$confirm_save_before_new, {
       req(input$project_name)
-      
+
       # Save current project
       if (input$save_location == "default") {
         save_path <- get_project_dir()
@@ -2665,15 +2693,15 @@ annotate_gui <- function() {
           dir.create(save_path, recursive = TRUE)
         }
       }
-      
+
       filename <- if (!grepl("\\.rds$", input$project_name)) {
         paste0(input$project_name, ".rds")
       } else {
         input$project_name
       }
-      
+
       filepath <- file.path(save_path, filename)
-      
+
       project_state <- list(
         text = rv$text,
         annotations = rv$annotations,
@@ -2685,7 +2713,7 @@ annotate_gui <- function() {
         history = rv$history,
         history_index = rv$history_index
       )
-      
+
       handle_error(
         expr = {
           saveRDS(project_state, file = filepath)
@@ -2740,14 +2768,14 @@ annotate_gui <- function() {
     # Enhance error handling for file operations
     observeEvent(input$import_text, {
       req(input$file_input)
-      
+
       # Check if there's existing work that might be lost
       has_existing_work <- (
-        nchar(rv$text) > 0 || 
-          nrow(rv$annotations) > 0 || 
+        nchar(rv$text) > 0 ||
+          nrow(rv$annotations) > 0 ||
           length(rv$codes) > 0
       )
-      
+
       if (has_existing_work) {
         # Show confirmation dialog
         showModal(modalDialog(
@@ -2766,19 +2794,19 @@ annotate_gui <- function() {
             tags$br(),
             tags$p(
               style = "background-color: #f8f9fa; padding: 10px; border-radius: 4px; border-left: 4px solid #007bff;",
-              icon("info-circle"), 
-              " ", 
-              strong("Recommendation: "), 
+              icon("info-circle"),
+              " ",
+              strong("Recommendation: "),
               "Save your current project before proceeding if you want to keep your work."
             ),
             tags$br(),
             tags$p("Do you want to continue with importing the new text file?")
           ),
           footer = tagList(
-            actionButton("save_before_import", "Save Project First", 
+            actionButton("save_before_import", "Save Project First",
                          class = "btn-primary", icon = icon("save")),
             modalButton("Cancel"),
-            actionButton("confirm_import_text", "Import Without Saving", 
+            actionButton("confirm_import_text", "Import Without Saving",
                          class = "btn-warning", icon = icon("upload"))
           )
         ))
@@ -2787,11 +2815,11 @@ annotate_gui <- function() {
         perform_text_import()
       }
     })
-    
+
     # Add handler for saving before import
     observeEvent(input$save_before_import, {
       removeModal()
-      
+
       # Trigger save project functionality
       if (!is.null(rv$current_project) && !is.null(rv$current_project_path)) {
         # Quick save to existing location
@@ -2808,14 +2836,14 @@ annotate_gui <- function() {
             history_index = rv$history_index,
             current_file_name = rv$current_file_name
           )
-          
+
           saveRDS(project_state, file = rv$current_project_path)
           rv$project_modified <- FALSE
           showNotification("Project saved successfully. Proceeding with import...", type = "message")
-          
+
           # Proceed with import after successful save
           perform_text_import()
-          
+
         }, error = function(e) {
           showNotification(paste("Error saving project:", e$message), type = "error")
           # Show save dialog as fallback
@@ -2830,25 +2858,25 @@ annotate_gui <- function() {
         rv$import_after_save <- TRUE
       }
     })
-    
+
     # Add handler for confirming import without saving
     observeEvent(input$confirm_import_text, {
       removeModal()
       perform_text_import()
     })
-    
+
     perform_text_import <- function() {
       req(input$file_input)
-      
+
       handle_error(
         expr = {
           # Show progress notification
           showNotification("Importing text file...", type = "message", duration = 2)
-          
+
           # Get file extension and original file name
           file_ext <- tolower(tools::file_ext(input$file_input$name))
           rv$current_file_name <- basename(input$file_input$name)
-          
+
           # Read the file based on its type
           if (file_ext == "txt") {
             # For plain text files, read directly with line breaks preserved
@@ -2859,7 +2887,7 @@ annotate_gui <- function() {
             imported_text <- readtext(input$file_input$datapath)
             new_text <- imported_text$text
           }
-          
+
           # COMPLETE RESET OF ALL APPLICATION STATE
           rv$text <- new_text
           rv$annotations <- data.frame(
@@ -2875,64 +2903,64 @@ annotate_gui <- function() {
           rv$code_colors <- character()
           rv$memos <- list()
           rv$code_descriptions <- list()
-          
+
           # Reset code hierarchy to fresh state
           rv$code_tree <- Node$new("Root")
           rv$code_tree$type <- "theme"
           rv$code_tree$description <- "Root of the code hierarchy"
-          
+
           # Reset history with the new clean state
           rv$history <- list(list(text = rv$text, annotations = rv$annotations))
           rv$history_index <- 1
-          
+
           # Clear action history for undo/redo
           rv$action_history <- list()
           rv$action_index <- 0
-          
+
           # Clear any selection state
           rv$selected_start <- NULL
           rv$selected_end <- NULL
           rv$selected_theme <- NULL
-          
+
           # Mark project as modified since we've imported new content
           rv$project_modified <- TRUE
-          
+
           # COMPREHENSIVE UI CLEANUP
           # Clear all input fields
           updateTextInput(session, "code", value = "")
           updateTextAreaInput(session, "memo", value = "")
           updateTextInput(session, "codebook_new_code", value = "")
           updateTextAreaInput(session, "codebook_code_description", value = "")
-          
+
           # Clear any text selection
           session$sendCustomMessage("clearSelection", list())
-          
+
           # Force immediate update of text display
           output$text_display <- renderUI({
             HTML(update_text_display())
           })
-          
+
           # Also update floating text display
           output$floating_text_display <- renderUI({
             HTML(update_text_display())
           })
-          
+
           # Use a slight delay to ensure UI updates are processed
           session$sendCustomMessage("refreshDisplay", list())
-          
+
           # Success message
           showNotification(
-            paste("Text imported successfully from", rv$current_file_name, 
-                  "- All previous work has been cleared."), 
+            paste("Text imported successfully from", rv$current_file_name,
+                  "- All previous work has been cleared."),
             type = "message",
             duration = 4
           )
-          
+
         },
         error_msg = "Failed to import text file"
       )
     }
-    
+
     # Add observer to handle import after save completion
     observeEvent(rv$project_modified, {
       # Check if we should import after saving
@@ -2941,7 +2969,7 @@ annotate_gui <- function() {
         perform_text_import()
       }
     })
-    
+
     observeEvent(input$create_code, {
       if (!is.null(rv$selected_start) && !is.null(rv$selected_end)) {
         new_annotation <- data.frame(
@@ -2953,20 +2981,20 @@ annotate_gui <- function() {
           source_file = rv$current_file_name %||% "Unknown",  # Include source file
           stringsAsFactors = FALSE
         )
-        
+
         # Create and apply the action
         add_action <- create_action(
           type = "add_annotation",
           data = new_annotation,
           reverse_data = new_annotation  # Same data used for reverse action
         )
-        
+
         apply_action(rv, add_action)
         add_action(rv, add_action)
-        
+
         # Update codes list
         rv$codes <- unique(c(rv$codes, input$code))
-        
+
         # AUTO-ADD CODE TO ROOT IF NOT ALREADY IN HIERARCHY
         if (!code_exists_in_hierarchy(rv$code_tree, input$code)) {
           new_code_node <- rv$code_tree$AddChild(input$code)
@@ -2974,40 +3002,40 @@ annotate_gui <- function() {
           new_code_node$description <- ""
           new_code_node$created <- Sys.time()
         }
-        
+
         # Assign color if needed using readable color palette
         if (!(input$code %in% names(rv$code_colors))) {
           used_colors <- as.character(rv$code_colors)
           new_color <- get_next_palette_color(used_colors)
-          
+
           # If all palette colors are used, generate a random readable color
           if (new_color %in% used_colors) {
             new_color <- generate_readable_color()
-            
+
             # Ensure the generated color is actually readable
             attempts <- 0
             while (!is_color_readable(new_color) && attempts < 10) {
               new_color <- generate_readable_color()
               attempts <- attempts + 1
             }
-            
+
             # If we still don't have a readable color after 10 attempts, use a safe default
             if (!is_color_readable(new_color)) {
               safe_colors <- c("#FFE6CC", "#E6F3FF", "#E6FFE6", "#FFE6F3", "#F3E6FF")
               new_color <- sample(safe_colors, 1)
             }
           }
-          
+
           rv$code_colors[input$code] <- new_color
         }
-        
+
         # Clear inputs
         updateTextInput(session, "code", value = "")
         updateTextAreaInput(session, "memo", value = "")
         rv$selected_start <- NULL
         rv$selected_end <- NULL
         session$sendCustomMessage("clearSelection", list())
-        
+
         # Update UI
         output$text_display <- renderUI({
           HTML(update_text_display())
@@ -3053,6 +3081,29 @@ annotate_gui <- function() {
       })
 
       removeModal()
+    })
+
+    observeEvent(input$export_hierarchy_toolbar, {
+      # Call the existing export_hierarchy_btn function
+      showModal(modalDialog(
+        title = "Export Hierarchy",
+        downloadButton("download_hierarchy", "Download JSON"),
+        footer = modalButton("Close")
+      ))
+    })
+
+    # Import hierarchy toolbar button handler
+    observeEvent(input$import_hierarchy_toolbar, {
+      # Call the existing import_hierarchy_btn function
+      showModal(modalDialog(
+        title = "Import Hierarchy",
+        fileInput("hierarchy_file", "Choose JSON file",
+                  accept = c("application/json", ".json")),
+        footer = tagList(
+          modalButton("Cancel"),
+          actionButton("confirm_import", "Import")
+        )
+      ))
     })
 
     # Undo functionality
@@ -3111,21 +3162,21 @@ annotate_gui <- function() {
             var endChar = null;
             var isSelecting = false;
             var activeWindow = 'main'; // Track which window is active for selection
-            
+
             function initializeSelection() {
               // Remove existing event listeners
               $('#text_display, #floating_text_content').off('mousedown mousemove');
               $(document).off('mouseup');
-            
+
               // Add mousedown event listener for character selection
               $('#text_display, #floating_text_content').on('mousedown', '.char', function(e) {
                 e.preventDefault();
                 if (!isSelecting) return;
-            
+
                 startChar = endChar = parseInt($(this).attr('id').replace('char_', '').replace('float_char_', ''));
                 updateHighlight();
               });
-            
+
               // Add mousemove event listener for selection dragging
               $('#text_display, #floating_text_content').on('mousemove', '.char', function(e) {
                 if (e.buttons === 1 && isSelecting) {
@@ -3133,7 +3184,7 @@ annotate_gui <- function() {
                   updateHighlight();
                 }
               });
-            
+
               // Add mouseup event listener to finalize selection
               $(document).on('mouseup', function() {
                 if (isSelecting && startChar !== null && endChar !== null) {
@@ -3143,28 +3194,28 @@ annotate_gui <- function() {
                 }
               });
             }
-            
+
             function updateHighlight() {
               if (startChar === null || endChar === null) return;
-            
+
               // Clear all highlights first
               $('.char').removeClass('highlighted');
-            
+
               var start = Math.min(startChar, endChar);
               var end = Math.max(startChar, endChar);
-            
+
               // Update highlights in both windows - accounting for line breaks
               for (var i = start; i <= end; i++) {
                 $('#char_' + i + ', #float_char_' + i).addClass('highlighted');
               }
             }
-            
+
             function updateShiny() {
               // Get the text from highlighted spans, respecting line breaks
               var selectedText = '';
               var start = Math.min(startChar, endChar);
               var end = Math.max(startChar, endChar);
-              
+
               // We need to collect the text properly respecting the DOM structure
               // with <br> tags which might be present between character spans
               for (var i = start; i <= end; i++) {
@@ -3173,35 +3224,35 @@ annotate_gui <- function() {
                   selectedText += charSpan.text();
                 }
               }
-              
+
               Shiny.setInputValue('selected_text', {
                 text: selectedText,
                 start: start,
                 end: end
               });
             }
-            
+
             // Add event listener for floating window toggle
             $('#floating_text_window').on('show hide', function() {
               setTimeout(initializeSelection, 100); // Short delay to ensure DOM is updated
             });
-            
+
             Shiny.addCustomMessageHandler('startSelecting', function(message) {
               isSelecting = true;
               initializeSelection();
             });
-            
+
             Shiny.addCustomMessageHandler('clearSelection', function(message) {
               $('.char').removeClass('highlighted');
               startChar = endChar = null;
               isSelecting = false;
               Shiny.setInputValue('selected_text', null);
             });
-            
+
             // Initialize selection handlers when page loads
             $(document).ready(function() {
               initializeSelection();
-            
+
               // Add toggle button handler
               $('#toggle_text_window').click(function() {
                 setTimeout(initializeSelection, 100);
@@ -3240,20 +3291,20 @@ annotate_gui <- function() {
           source_file = rv$current_file_name %||% "Unknown",  # Include source file
           stringsAsFactors = FALSE
         )
-        
+
         # Create and apply the action
         add_action <- create_action(
           type = "add_annotation",
           data = new_annotation,
           reverse_data = new_annotation  # Same data used for reverse action
         )
-        
+
         apply_action(rv, add_action)
         add_action(rv, add_action)
-        
+
         # Update codes list
         rv$codes <- unique(c(rv$codes, input$code))
-        
+
         # AUTO-ADD CODE TO ROOT IF NOT ALREADY IN HIERARCHY
         if (!code_exists_in_hierarchy(rv$code_tree, input$code)) {
           new_code_node <- rv$code_tree$AddChild(input$code)
@@ -3261,40 +3312,40 @@ annotate_gui <- function() {
           new_code_node$description <- ""
           new_code_node$created <- Sys.time()
         }
-        
+
         # Assign color if needed using readable color palette
         if (!(input$code %in% names(rv$code_colors))) {
           used_colors <- as.character(rv$code_colors)
           new_color <- get_next_palette_color(used_colors)
-          
+
           # If all palette colors are used, generate a random readable color
           if (new_color %in% used_colors) {
             new_color <- generate_readable_color()
-            
+
             # Ensure the generated color is actually readable
             attempts <- 0
             while (!is_color_readable(new_color) && attempts < 10) {
               new_color <- generate_readable_color()
               attempts <- attempts + 1
             }
-            
+
             # If we still don't have a readable color after 10 attempts, use a safe default
             if (!is_color_readable(new_color)) {
               safe_colors <- c("#FFE6CC", "#E6F3FF", "#E6FFE6", "#FFE6F3", "#F3E6FF")
               new_color <- sample(safe_colors, 1)
             }
           }
-          
+
           rv$code_colors[input$code] <- new_color
         }
-        
+
         # Clear inputs
         updateTextInput(session, "code", value = "")
         updateTextAreaInput(session, "memo", value = "")
         rv$selected_start <- NULL
         rv$selected_end <- NULL
         session$sendCustomMessage("clearSelection", list())
-        
+
         # Update UI
         output$text_display <- renderUI({
           HTML(update_text_display())
@@ -3332,10 +3383,10 @@ annotate_gui <- function() {
           stringsAsFactors = FALSE
         )
         rv$annotations <- rbind(rv$annotations, new_annotation)
-        
+
         # Update codes list
         rv$codes <- unique(c(rv$codes, input$code_to_apply))
-        
+
         # AUTO-ADD CODE TO ROOT IF NOT ALREADY IN HIERARCHY
         if (!code_exists_in_hierarchy(rv$code_tree, input$code_to_apply)) {
           new_code_node <- rv$code_tree$AddChild(input$code_to_apply)
@@ -3343,37 +3394,37 @@ annotate_gui <- function() {
           new_code_node$description <- ""
           new_code_node$created <- Sys.time()
         }
-        
+
         # Assign color if needed using improved color system
         if (!(input$code_to_apply %in% names(rv$code_colors))) {
           used_colors <- as.character(rv$code_colors)
           new_color <- get_next_palette_color(used_colors)
-          
+
           # If all palette colors are used, generate a random readable color
           if (new_color %in% used_colors) {
             new_color <- generate_readable_color()
-            
+
             # Ensure the generated color is actually readable
             attempts <- 0
             while (!is_color_readable(new_color) && attempts < 10) {
               new_color <- generate_readable_color()
               attempts <- attempts + 1
             }
-            
+
             # If we still don't have a readable color after 10 attempts, use a safe default
             if (!is_color_readable(new_color)) {
               safe_colors <- c("#FFE6CC", "#E6F3FF", "#E6FFE6", "#FFE6F3", "#F3E6FF")
               new_color <- sample(safe_colors, 1)
             }
           }
-          
+
           rv$code_colors[input$code_to_apply] <- new_color
         }
-        
+
         updateTextInput(session, "code", value = input$code_to_apply)
         showNotification("Code applied successfully!", type = "message")
         save_state()
-        
+
         # Update the text display
         output$text_display <- renderUI({
           HTML(update_text_display())
@@ -3477,28 +3528,28 @@ annotate_gui <- function() {
     # Event handler for Code Co-occurrence button
     observeEvent(input$code_co_occurrence, {
       req(nrow(rv$annotations) > 0)
-      
+
       # Get the selected analytical unit
       unit <- input$cooccurrence_unit %||% "paragraph"
-      
+
       # Generate the enhanced analysis with unit-based methodology
       analysis_results <- generate_code_co_occurrence_analysis(
         annotations = rv$annotations,
         text = rv$text,
         unit = unit
       )
-      
+
       # Store results in reactive values for access across multiple outputs
       rv$co_occurrence_results <- analysis_results
-      
+
       # Create the modal dialog with multiple tabs including unit information
       showModal(modalDialog(
         title = paste("Code Co-occurrence Analysis -",
                       tools::toTitleCase(analysis_results$unit_info$analytical_unit), "Level"),
-        
+
         tabsetPanel(
           id = "co_occurrence_tabs",
-          
+
           # Unit Information tab
           tabPanel("Analysis Info",
                    fluidRow(
@@ -3537,19 +3588,19 @@ annotate_gui <- function() {
                             )
                      )
                    )),
-          
+
           # Network visualization tab
           tabPanel("Network View",
                    plotOutput("code_co_occurrence_network", height = "500px"),
                    hr(),
                    helpText("Node size reflects total co-occurrences. Line thickness indicates Jaccard similarity strength. Line opacity shows phi coefficient magnitude.")),
-          
+
           # Heatmap visualization tab
           tabPanel("Heatmap View",
                    plotOutput("code_co_occurrence_heatmap", height = "500px"),
                    hr(),
                    helpText("Darker colors indicate stronger co-occurrence relationships based on Jaccard similarity coefficients.")),
-          
+
           # Statistics tab
           tabPanel("Statistics",
                    h4("Summary Statistics"),
@@ -3558,7 +3609,7 @@ annotate_gui <- function() {
                    h4("Detailed Co-occurrence Matrix"),
                    DTOutput("co_occurrence_table"))
         ),
-        
+
         size = "l",
         easyClose = TRUE,
         footer = modalButton("Close")
@@ -4345,7 +4396,7 @@ add_action <- function(rv, action) {
 #' @keywords internal
 apply_action <- function(rv, action, reverse = FALSE) {
   data <- if (reverse) action$reverse_data else action$data
-  
+
   switch(action$type,
          "add_annotation" = {
            if (reverse) {
@@ -4370,12 +4421,12 @@ apply_action <- function(rv, action, reverse = FALSE) {
                  stringsAsFactors = FALSE
                )
              }
-             
+
              # Ensure data has source_file column
              if (!"source_file" %in% colnames(data)) {
                data$source_file <- rv$current_file_name %||% "Unknown"
              }
-             
+
              rv$annotations <- rbind(rv$annotations, data)
            }
          },
@@ -4385,50 +4436,50 @@ apply_action <- function(rv, action, reverse = FALSE) {
              new_code <- data$new_code
              old_codes <- data$old_codes
              old_colors <- data$old_colors
-             
+
              # Update annotations back to original codes
              # For simplicity, we'll assign all instances to the first old code
              # (A more sophisticated approach would track which annotations had which original codes)
              rv$annotations$code[rv$annotations$code == new_code] <- old_codes[1]
-             
+
              # Update codes list
              rv$codes <- unique(c(setdiff(rv$codes, new_code), old_codes))
-             
+
              # Restore old colors
              if (!is.null(old_colors)) {
                for (code in names(old_colors)) {
                  rv$code_colors[code] <- old_colors[[code]]
                }
              }
-             
+
              # Remove merged code color
              rv$code_colors <- rv$code_colors[names(rv$code_colors) != new_code]
-             
+
            } else {
              # Apply merge: combine old codes into new code
              old_codes <- data$old_codes
              new_code <- data$new_code
-             
+
              # Update all annotations that use old codes
              for (old_code in old_codes) {
                rv$annotations$code[rv$annotations$code == old_code] <- new_code
              }
-             
+
              # Update codes list
              rv$codes <- unique(c(setdiff(rv$codes, old_codes), new_code))
-             
+
              # Assign color to new code if not already assigned
              if (!(new_code %in% names(rv$code_colors))) {
                used_colors <- as.character(rv$code_colors)
                new_color <- get_next_palette_color(used_colors)
                rv$code_colors[new_code] <- new_color
              }
-             
+
              # Remove old code colors
              rv$code_colors <- rv$code_colors[!names(rv$code_colors) %in% old_codes]
            }
          })
-  
+
   invisible(rv)
 }
 
@@ -4568,7 +4619,7 @@ load_selected_project <- function(rv, input, session) {
     showNotification("Cannot load from recent projects in project-specific mode", type = "warning")
     return()
   }
-  
+
   # Use the existing load_project_from_path function
   load_project_from_path(rv, filepath, session)
 }
@@ -4585,14 +4636,14 @@ load_selected_project <- function(rv, input, session) {
 load_project_from_path <- function(rv, filepath, session) {
   tryCatch({
     project_state <- readRDS(filepath)
-    
+
     # Check if this is a project-specific storage project
     if (!is.null(project_state$project_dir)) {
       # Update storage mode for this session
       rv$storage_mode <- "project"
       rv$project_specific_dir <- project_state$project_dir
     }
-    
+
     # Update all reactive values with loaded state
     rv$text <- project_state$text
     rv$annotations <- project_state$annotations
@@ -4606,11 +4657,11 @@ load_project_from_path <- function(rv, filepath, session) {
     rv$current_project <- basename(tools::file_path_sans_ext(filepath))
     rv$current_project_path <- filepath
     rv$project_modified <- FALSE  # Reset modified flag after successful load
-    
+
     # Update UI elements
     updateTextAreaInput(session, "text_input", value = rv$text)
     session$sendCustomMessage("clearSelection", list())
-    
+
     showNotification("Project loaded successfully", type = "message")
     removeModal()
   }, error = function(e) {
@@ -4631,82 +4682,82 @@ update_text_display <- function(rv) {
   # First, convert newlines in the original text to HTML <br> tags
   # We need to do this before processing character by character
   text_with_linebreaks <- gsub("\n", "<br>", rv$text)
-  
+
   if (nrow(rv$annotations) == 0) {
     # If no annotations, still need to preserve line breaks
     # First split by <br> tags we just added
     text_parts <- strsplit(text_with_linebreaks, "<br>")[[1]]
     result <- character(length(text_parts))
-    
+
     # Process each line separately
     for (i in seq_along(text_parts)) {
       line_chars <- strsplit(text_parts[i], "")[[1]]
       # Calculate the character offset for this line
       char_offset <- ifelse(i == 1, 0, sum(nchar(text_parts[1:(i-1)])) + (i-1))
       char_indices <- char_offset + 1:length(line_chars)
-      
+
       # Create spans for each character with correct indices
-      result[i] <- paste0("<span class='char' id='char_", char_indices, "'>", 
+      result[i] <- paste0("<span class='char' id='char_", char_indices, "'>",
                           line_chars, "</span>", collapse = "")
     }
-    
+
     # Join the lines with <br> tags
     return(paste(result, collapse = "<br>"))
   }
-  
+
   # For text with annotations, we need a more complex approach
   sorted_annotations <- rv$annotations[order(rv$annotations$start), ]
   displayed_text <- ""
   last_end <- 0
-  
+
   for (i in 1:nrow(sorted_annotations)) {
     # Handle text before current annotation
     if (sorted_annotations$start[i] > last_end + 1) {
       before_text <- substr(rv$text, last_end + 1, sorted_annotations$start[i] - 1)
       # Replace newlines with <br> tags in this segment
       before_text <- gsub("\n", "<br>", before_text)
-      
+
       # Split by <br> and process each part separately
       before_parts <- strsplit(before_text, "<br>")[[1]]
       before_result <- character(length(before_parts))
-      
+
       for (j in seq_along(before_parts)) {
         if (before_parts[j] == "") next
-        
+
         part_chars <- strsplit(before_parts[j], "")[[1]]
         # Calculate character offset
-        char_offset <- ifelse(j == 1, last_end, 
+        char_offset <- ifelse(j == 1, last_end,
                               last_end + sum(nchar(before_parts[1:(j-1)])) + (j-1))
         char_indices <- char_offset + 1:length(part_chars)
-        
-        before_result[j] <- paste0("<span class='char' id='char_", char_indices, "'>", 
+
+        before_result[j] <- paste0("<span class='char' id='char_", char_indices, "'>",
                                    part_chars, "</span>", collapse = "")
       }
-      
+
       displayed_text <- paste0(displayed_text, paste(before_result, collapse = "<br>"))
     }
-    
+
     # Handle the annotated text
     code_color <- rv$code_colors[sorted_annotations$code[i]]
     if (is.null(code_color)) {
       code_color <- "#CCCCCC"  # Default color if not found
     }
-    
+
     # Get the annotated text and handle line breaks
     annotated_text <- substr(rv$text, sorted_annotations$start[i], sorted_annotations$end[i])
     # Replace newlines with <br> tags
     annotated_text <- gsub("\n", "<br>", annotated_text)
-    
+
     # Split by <br> and process each part
     annotated_parts <- strsplit(annotated_text, "<br>")[[1]]
     annotated_result <- character(length(annotated_parts))
-    
+
     for (j in seq_along(annotated_parts)) {
       if (annotated_parts[j] == "") {
         annotated_result[j] <- ""
         next
       }
-      
+
       part_chars <- strsplit(annotated_parts[j], "")[[1]]
       # Calculate character offset
       char_offset <- sorted_annotations$start[i] - 1
@@ -4714,38 +4765,38 @@ update_text_display <- function(rv) {
         char_offset <- char_offset + sum(nchar(annotated_parts[1:(j-1)])) + (j-1)
       }
       char_indices <- char_offset + 1:length(part_chars)
-      
-      annotated_result[j] <- paste0("<span class='char' id='char_", char_indices, "'>", 
+
+      annotated_result[j] <- paste0("<span class='char' id='char_", char_indices, "'>",
                                     part_chars, "</span>", collapse = "")
     }
-    
+
     annotated_spans <- paste(annotated_result, collapse = "<br>")
-    
+
     displayed_text <- paste0(displayed_text,
-                             "<span class='code-display' style='background-color: ", code_color, 
-                             ";' data-code='", sorted_annotations$code[i], 
-                             "' data-start='", sorted_annotations$start[i], 
+                             "<span class='code-display' style='background-color: ", code_color,
+                             ";' data-code='", sorted_annotations$code[i],
+                             "' data-start='", sorted_annotations$start[i],
                              "' data-end='", sorted_annotations$end[i], "'>",
                              "[", sorted_annotations$code[i], "]",
                              annotated_spans,
                              "</span>")
-    
+
     last_end <- sorted_annotations$end[i]
   }
-  
+
   # Handle text after the last annotation
   if (last_end < nchar(rv$text)) {
     after_text <- substr(rv$text, last_end + 1, nchar(rv$text))
     # Replace newlines with <br> tags
     after_text <- gsub("\n", "<br>", after_text)
-    
+
     # Split by <br> and process each part
     after_parts <- strsplit(after_text, "<br>")[[1]]
     after_result <- character(length(after_parts))
-    
+
     for (j in seq_along(after_parts)) {
       if (after_parts[j] == "") next
-      
+
       part_chars <- strsplit(after_parts[j], "")[[1]]
       # Calculate character offset
       char_offset <- last_end
@@ -4753,14 +4804,14 @@ update_text_display <- function(rv) {
         char_offset <- char_offset + sum(nchar(after_parts[1:(j-1)])) + (j-1)
       }
       char_indices <- char_offset + 1:length(part_chars)
-      
-      after_result[j] <- paste0("<span class='char' id='char_", char_indices, "'>", 
+
+      after_result[j] <- paste0("<span class='char' id='char_", char_indices, "'>",
                                 part_chars, "</span>", collapse = "")
     }
-    
+
     displayed_text <- paste0(displayed_text, paste(after_result, collapse = "<br>"))
   }
-  
+
   return(displayed_text)
 }
 
@@ -4802,13 +4853,13 @@ concatenate_memos <- function(existing_memo, new_memo) {
 save_as_html <- function(filename, rv) {
   # Get the current state of the text display
   html_content <- update_text_display(rv)
-  
+
   # Create a complete HTML document
   full_html <- paste0(
     "<!DOCTYPE html>\n<html>\n<head>\n",
     "<style>\n",
     ".code-display { padding: 2px 5px; margin-right: 5px; border-radius: 3px; font-weight: bold; color: black; display: inline-block; }\n",
-    "#annotated_text { white-space: pre-wrap; line-height: 1.5; }\n", 
+    "#annotated_text { white-space: pre-wrap; line-height: 1.5; }\n",
     ".code-display br { display: block; content: \"\"; margin-top: 0.5em; }\n",
     "</style>\n",
     "</head>\n<body>\n",
@@ -4818,7 +4869,7 @@ save_as_html <- function(filename, rv) {
     "\n</div>\n",
     "</body>\n</html>"
   )
-  
+
   # Write the HTML content to a file
   writeLines(full_html, filename)
 }
@@ -4866,32 +4917,32 @@ create_plain_text_annotations <- function(text, annotations) {
   if (nrow(annotations) == 0) {
     return(text)
   }
-  
+
   sorted_annotations <- annotations[order(annotations$start), ]
   plain_text <- ""
   last_end <- 0
-  
+
   for (i in 1:nrow(sorted_annotations)) {
     if (sorted_annotations$start[i] > last_end + 1) {
       # Extract text before current annotation, preserving line breaks
       plain_text <- paste0(plain_text, substr(text, last_end + 1, sorted_annotations$start[i] - 1))
     }
-    
+
     # Extract the annotated text segment, preserving line breaks
     annotated_segment <- substr(text, sorted_annotations$start[i], sorted_annotations$end[i])
-    
+
     plain_text <- paste0(plain_text,
                          "[", sorted_annotations$code[i], ": ",
                          annotated_segment,
                          "]")
     last_end <- sorted_annotations$end[i]
   }
-  
+
   if (last_end < nchar(text)) {
     # Extract text after last annotation, preserving line breaks
     plain_text <- paste0(plain_text, substr(text, last_end + 1, nchar(text)))
   }
-  
+
   return(plain_text)
 }
 
@@ -4937,11 +4988,11 @@ create_new_project <- function(rv, session) {
   rv$action_history <- list()
   rv$action_index <- 0
   rv$merged_codes <- list()
-  
+
   # Clear UI elements
   updateTextAreaInput(session, "text_input", value = "")
   session$sendCustomMessage("clearSelection", list())
-  
+
   showNotification("New project created", type = "message")
 }
 
@@ -5014,19 +5065,19 @@ generate_code_frequency_plot <- function(annotations) {
 generate_code_co_occurrence_analysis <- function(annotations, text = NULL, unit = "paragraph") {
   # Validate input parameters
   unit <- match.arg(unit, choices = c("sentence", "paragraph", "document"))
-  
+
   if (is.null(annotations) || nrow(annotations) == 0) {
     return(create_empty_cooccurrence_result(unit))
   }
-  
+
   # Get unique codes
   codes <- unique(annotations$code)
   n_codes <- length(codes)
-  
+
   if (n_codes <= 1) {
     return(create_empty_cooccurrence_result(unit))
   }
-  
+
   # Parse text into analytical units if text is provided
   if (!is.null(text) && nchar(text) > 0) {
     text_units <- parse_text_into_units(text, unit)
@@ -5035,26 +5086,26 @@ generate_code_co_occurrence_analysis <- function(annotations, text = NULL, unit 
     # Fallback: use position-based units if no text provided
     unit_assignments <- assign_annotations_to_position_units(annotations, unit)
   }
-  
+
   # Calculate co-occurrence matrices
   co_matrix <- calculate_unit_cooccurrence_matrix(codes, unit_assignments)
   jaccard_matrix <- calculate_jaccard_similarity_matrix(codes, unit_assignments)
   phi_matrix <- calculate_phi_coefficient_matrix(codes, unit_assignments)
-  
+
   # Generate visualizations
   network_plot <- generate_network_visualization(co_matrix, jaccard_matrix, phi_matrix, codes)
   heatmap_plot <- generate_heatmap_visualization(jaccard_matrix, codes)
-  
+
   # Calculate summary statistics
   summary_stats <- calculate_cooccurrence_summary(co_matrix, jaccard_matrix, phi_matrix, codes)
-  
+
   # Add unit information
   unit_info <- list(
     analytical_unit = unit,
     total_units = length(unique(unit_assignments$unit_id)),
     codes_per_unit = calculate_codes_per_unit_stats(unit_assignments)
   )
-  
+
   return(list(
     co_occurrence = co_matrix,
     jaccard_similarity = jaccard_matrix,
@@ -5073,7 +5124,7 @@ create_empty_cooccurrence_result <- function(unit) {
          main = "No co-occurrence data available", xlab = "", ylab = "")
     recordPlot()
   }
-  
+
   list(
     co_occurrence = matrix(0, nrow = 0, ncol = 0),
     jaccard_similarity = matrix(0, nrow = 0, ncol = 0),
@@ -5194,33 +5245,33 @@ generate_network_visualization <- function(co_matrix, jaccard_matrix, phi_matrix
   # Save current par settings and restore on exit
   oldpar <- par(no.readonly = TRUE)
   on.exit(par(oldpar))
-  
+
   if (length(codes) < 2) {
     plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1),
-         main = "Network Visualization", 
+         main = "Network Visualization",
          xlab = "Insufficient codes for network visualization",
          ylab = "")
     return(recordPlot())
   }
-  
+
   # Calculate node positions in a circle
   n_codes <- length(codes)
   angles <- seq(0, 2 * pi, length.out = n_codes + 1)[1:n_codes]
   x_pos <- 0.5 + 0.3 * cos(angles)
   y_pos <- 0.5 + 0.3 * sin(angles)
-  
+
   # Calculate node sizes based on total co-occurrences
   node_totals <- rowSums(co_matrix, na.rm = TRUE)
   max_total <- max(node_totals, na.rm = TRUE)
   if (max_total == 0) max_total <- 1  # Avoid division by zero
   node_sizes <- 0.5 + 2 * (node_totals / max_total)  # Scale between 0.5 and 2.5
-  
+
   # Set up plot with adjusted margins to remove space for legend
   par(mar = c(2, 2, 3, 2))
   plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1),
        main = "Code Co-occurrence Network",
        xlab = "", ylab = "", axes = FALSE)
-  
+
   # Draw edges for significant relationships
   max_jaccard <- max(jaccard_matrix, na.rm = TRUE)
   if (max_jaccard > 0) {
@@ -5228,44 +5279,44 @@ generate_network_visualization <- function(co_matrix, jaccard_matrix, phi_matrix
       for (j in (i+1):n_codes) {
         jaccard_sim <- jaccard_matrix[i, j]
         phi_coeff <- abs(phi_matrix[i, j])
-        
+
         # Only draw edges for meaningful relationships
         if (!is.na(jaccard_sim) && jaccard_sim > 0.1) {
           # Edge thickness based on Jaccard similarity
           edge_width <- 1 + 3 * (jaccard_sim / max_jaccard)
-          
+
           # Edge opacity based on phi coefficient magnitude
           edge_alpha <- max(0.3, min(1, phi_coeff * 2))
           edge_color <- rgb(0.5, 0.5, 0.5, alpha = edge_alpha)
-          
+
           segments(x_pos[i], y_pos[i], x_pos[j], y_pos[j],
                    lwd = edge_width, col = edge_color)
         }
       }
     }
   }
-  
+
   # Draw nodes
   for (i in 1:n_codes) {
-    points(x_pos[i], y_pos[i], pch = 19, cex = node_sizes[i], 
+    points(x_pos[i], y_pos[i], pch = 19, cex = node_sizes[i],
            col = "lightblue", lwd = 2)
-    points(x_pos[i], y_pos[i], pch = 1, cex = node_sizes[i], 
+    points(x_pos[i], y_pos[i], pch = 1, cex = node_sizes[i],
            col = "darkblue", lwd = 2)
   }
-  
+
   # Add labels
   for (i in 1:n_codes) {
     # Position labels outside the nodes
     label_offset <- 0.08
     label_x <- x_pos[i] + label_offset * cos(angles[i])
     label_y <- y_pos[i] + label_offset * sin(angles[i])
-    
-    text(label_x, label_y, codes[i], cex = 0.8, 
+
+    text(label_x, label_y, codes[i], cex = 0.8,
          adj = c(0.5, 0.5), font = 2)
   }
-  
+
   # Legend removed as requested
-  
+
   return(recordPlot())
 }
 
@@ -5287,66 +5338,66 @@ generate_heatmap_visualization <- function(jaccard_matrix, codes) {
   # Save current par settings and restore on exit
   oldpar <- par(no.readonly = TRUE)
   on.exit(par(oldpar))
-  
+
   if (length(codes) < 2) {
     plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1),
-         main = "Co-occurrence Heatmap", 
+         main = "Co-occurrence Heatmap",
          xlab = "Insufficient codes for heatmap",
          ylab = "")
     return(recordPlot())
   }
-  
+
   # Create color palette
   colors <- colorRampPalette(c("white", "lightblue", "blue", "darkblue"))(100)
-  
+
   # Set up margins with more space on the right for compact legend
   par(mar = c(8, 8, 4, 6))
-  
+
   # Create the heatmap
-  image(1:ncol(jaccard_matrix), 1:nrow(jaccard_matrix), 
-        t(jaccard_matrix), 
+  image(1:ncol(jaccard_matrix), 1:nrow(jaccard_matrix),
+        t(jaccard_matrix),
         col = colors,
         main = "Code Co-occurrence Heatmap\n(Jaccard Similarity)",
         xlab = "", ylab = "", axes = FALSE)
-  
+
   # Add axes with code names
   axis(1, at = 1:length(codes), labels = codes, las = 2, cex.axis = 0.8)
   axis(2, at = 1:length(codes), labels = codes, las = 2, cex.axis = 0.8)
-  
+
   # Add grid lines
   abline(h = (1:length(codes)) + 0.5, col = "lightgray", lwd = 0.5)
   abline(v = (1:length(codes)) + 0.5, col = "lightgray", lwd = 0.5)
-  
+
   # Add text values in cells for small matrices
   if (length(codes) <= 8) {
     for (i in 1:nrow(jaccard_matrix)) {
       for (j in 1:ncol(jaccard_matrix)) {
         if (!is.na(jaccard_matrix[i, j]) && jaccard_matrix[i, j] > 0) {
-          text(j, i, sprintf("%.2f", jaccard_matrix[i, j]), 
+          text(j, i, sprintf("%.2f", jaccard_matrix[i, j]),
                cex = 0.7, col = ifelse(jaccard_matrix[i, j] > 0.5, "white", "black"))
         }
       }
     }
   }
-  
+
   # Add a more compact color scale legend
   # Create a vertical color bar in the right margin
   legend_x <- par("usr")[2] + 0.15 * (par("usr")[2] - par("usr")[1])
   legend_y_seq <- seq(par("usr")[3], par("usr")[4], length.out = 5)
-  
+
   # Create legend with smaller, more compact design
   legend_values <- c("1.0", "0.75", "0.5", "0.25", "0.0")
   legend_colors <- colors[c(100, 75, 50, 25, 1)]
-  
+
   # Add a compact legend that doesn't overlap with the heatmap
   par(xpd = TRUE)  # Allow drawing outside plot region
-  
+
   # Create legend box coordinates
   legend_width <- 0.03 * (par("usr")[2] - par("usr")[1])
   legend_height <- 0.6 * (par("usr")[4] - par("usr")[3])
   legend_x_start <- par("usr")[2] + 0.05 * (par("usr")[2] - par("usr")[1])
   legend_y_start <- par("usr")[3] + 0.2 * (par("usr")[4] - par("usr")[3])
-  
+
   # Draw color boxes for legend
   legend_box_height <- legend_height / 5
   for (i in 1:5) {
@@ -5354,22 +5405,22 @@ generate_heatmap_visualization <- function(jaccard_matrix, codes) {
     y_top <- y_bottom + legend_box_height
     rect(legend_x_start, y_bottom, legend_x_start + legend_width, y_top,
          col = legend_colors[6 - i], border = "black", lwd = 0.5)
-    
+
     # Add text labels
-    text(legend_x_start + legend_width + 0.01 * (par("usr")[2] - par("usr")[1]), 
-         (y_bottom + y_top) / 2, 
-         legend_values[6 - i], 
+    text(legend_x_start + legend_width + 0.01 * (par("usr")[2] - par("usr")[1]),
+         (y_bottom + y_top) / 2,
+         legend_values[6 - i],
          cex = 0.6, adj = 0)
   }
-  
+
   # Add legend title
-  text(legend_x_start + legend_width / 2, 
+  text(legend_x_start + legend_width / 2,
        legend_y_start + legend_height + 0.05 * (par("usr")[4] - par("usr")[3]),
-       "Jaccard\nSimilarity", 
+       "Jaccard\nSimilarity",
        cex = 0.7, adj = 0.5, font = 2)
-  
+
   par(xpd = FALSE)  # Reset to default
-  
+
   return(recordPlot())
 }
 
@@ -6568,19 +6619,25 @@ import_hierarchy <- function(json_string) {
 #' @keywords internal
 visualize_hierarchy <- function(node, all_codes = NULL) {
   if (is.null(node)) return("Empty hierarchy")
-  
+
+  # Define icon HTML entities that work across browsers
+  FOLDER_CLOSED_ICON <- "&#128193;" # Folder icon HTML entity
+  FOLDER_OPEN_ICON <- "&#128194;"   # Open folder icon HTML entity
+  FILE_ICON <- "&#128196;"          # File/document icon HTML entity
+  CALENDAR_ICON <- "&#128197;"      # Calendar icon HTML entity
+
   print_tree <- function(node, indent = 0) {
     if (is.null(node)) return(character(0))
-    
-    # Get node type symbol using Unicode escape sequences for emoji
+
+    # Get node type symbol using HTML entities
     symbol <- if (!is.null(node$type) && node$type == "theme")
-      "\\U0001F4C2" else "\\U0001F4C4"  # Folder: U+1F4C2, File: U+1F4C4
-    
+      FOLDER_OPEN_ICON else FILE_ICON
+
     # Root node gets a special treatment
     if (node$name == "Root" && indent == 0) {
-      symbol <- "\\U0001F4C1"  # Root folder: U+1F4C1
+      symbol <- FOLDER_CLOSED_ICON
     }
-    
+
     # Create the line for this node with proper data attributes and classes
     name_display <- if (!is.null(node$type)) {
       class_name <- if (node$type == "theme") "theme-item" else "code-item"
@@ -6589,7 +6646,7 @@ visualize_hierarchy <- function(node, all_codes = NULL) {
     } else {
       sprintf('<span>%s</span>', node$name)
     }
-    
+
     # Add description preview if available
     description_preview <- if (!is.null(node$description) && node$description != "") {
       trimmed_desc <- substr(node$description, 1, 30)
@@ -6600,17 +6657,17 @@ visualize_hierarchy <- function(node, all_codes = NULL) {
     } else {
       ""
     }
-    
+
     line <- paste0(
       paste(rep("  ", indent), collapse = ""),
       symbol, " ",
       name_display,
       description_preview
     )
-    
+
     # Start with this node's line
     lines <- line
-    
+
     # Add all children's lines, sorted alphabetically by type and name
     if (!is.null(node$children) && length(node$children) > 0) {
       # First sort themes, then codes - both alphabetically
@@ -6618,7 +6675,7 @@ visualize_hierarchy <- function(node, all_codes = NULL) {
       theme_children <- node$children[vapply(node$children, function(child) {
         !is.null(child$type) && child$type == "theme"
       }, logical(1))]
-      
+
       # Sort theme children by name
       if (length(theme_children) > 0) {
         sorted_theme_names <- sort(names(theme_children))
@@ -6627,12 +6684,12 @@ visualize_hierarchy <- function(node, all_codes = NULL) {
           lines <- c(lines, child_lines)
         }
       }
-      
+
       # Then get code children
       code_children <- node$children[vapply(node$children, function(child) {
         !is.null(child$type) && child$type == "code"
       }, logical(1))]
-      
+
       # Sort code children by name
       if (length(code_children) > 0) {
         sorted_code_names <- sort(names(code_children))
@@ -6642,19 +6699,19 @@ visualize_hierarchy <- function(node, all_codes = NULL) {
         }
       }
     }
-    
+
     return(lines)
   }
-  
+
   # Get all codes in the hierarchy
   codes_in_hierarchy <- character(0)
   collect_codes <- function(node) {
     if (is.null(node)) return()
-    
+
     if (!is.null(node$type) && node$type == "code" && !is.null(node$name)) {
       codes_in_hierarchy <<- c(codes_in_hierarchy, node$name)
     }
-    
+
     if (!is.null(node$children) && length(node$children) > 0) {
       children <- if (inherits(node$children, "Node")) {
         list(node$children)
@@ -6663,42 +6720,42 @@ visualize_hierarchy <- function(node, all_codes = NULL) {
       } else {
         list()
       }
-      
+
       for (child in children) {
         collect_codes(child)
       }
     }
   }
-  
+
   collect_codes(node)
-  
+
   # Start with the main hierarchy
   result <- print_tree(node)
-  
+
   # Add unassigned codes section if we have all_codes information
   if (!is.null(all_codes) && length(all_codes) > 0) {
     unassigned_codes <- setdiff(all_codes, codes_in_hierarchy)
-    
+
     if (length(unassigned_codes) > 0) {
       # Add a separator
       result <- c(result, "")
-      
-      # Add unassigned codes header
-      result <- c(result, "\U0001F4C5 <span class='theme-item' data-name='Unassigned Codes' data-type='theme'>Unassigned Codes</span> - Codes not in any theme")
-      
-      # Add each unassigned code
+
+      # Add unassigned codes header using calendar icon HTML entity
+      result <- c(result, paste0(CALENDAR_ICON, " <span class='theme-item' data-name='Unassigned Codes' data-type='theme'>Unassigned Codes</span> - Codes not in any theme"))
+
+      # Add each unassigned code with file icon HTML entity
       sorted_unassigned <- sort(unassigned_codes)
       for (code in sorted_unassigned) {
         code_line <- paste0(
-          "  \U0001F4C4 ",
-          sprintf('<span class="code-item" data-name="%s" data-type="code">%s</span>', 
+          "  ", FILE_ICON, " ",
+          sprintf('<span class="code-item" data-name="%s" data-type="code">%s</span>',
                   code, code)
         )
         result <- c(result, code_line)
       }
     }
   }
-  
+
   # Combine all lines and wrap in a div for proper styling
   paste(
     '<div class="hierarchy-container">',
@@ -6779,23 +6836,23 @@ calculate_hierarchy_stats <- function(node, all_codes = NULL) {
       average_codes_per_theme = 0
     ))
   }
-  
+
   n_themes <- 0
   n_codes <- 0
   codes_in_hierarchy <- character(0)
   max_depth <- 0
   codes_per_theme <- list()
-  
+
   traverse_node <- function(node, depth = 0) {
     if (is.null(node)) return()
-    
+
     # Check if node type exists and is a character
     node_type <- if (!is.null(node$type) && is.character(node$type)) node$type else "unknown"
-    
+
     # Only count themes that aren't the root node
     if (node_type == "theme" && !is.null(node$name) && node$name != "Root") {
       n_themes <<- n_themes + 1
-      
+
       # Count codes that are direct children of this theme
       if (!is.null(node$children)) {
         # Safely get children as a list
@@ -6806,15 +6863,15 @@ calculate_hierarchy_stats <- function(node, all_codes = NULL) {
         } else {
           list()
         }
-        
+
         codes_in_theme <- vapply(children, function(x) {
           child_type <- if (!is.null(x$type) && is.character(x$type)) x$type else "unknown"
           child_type == "code"
         }, logical(1))
-        
+
         theme_codes <- names(children)[codes_in_theme]
         codes_in_hierarchy <<- c(codes_in_hierarchy, theme_codes)
-        
+
         count_codes_in_theme <- sum(codes_in_theme)
         if (count_codes_in_theme > 0) {
           codes_per_theme[[node$name]] <<- count_codes_in_theme
@@ -6826,9 +6883,9 @@ calculate_hierarchy_stats <- function(node, all_codes = NULL) {
         codes_in_hierarchy <<- c(codes_in_hierarchy, node$name)
       }
     }
-    
+
     max_depth <<- max(max_depth, depth)
-    
+
     # Safely traverse children
     if (!is.null(node$children)) {
       children <- if (inherits(node$children, "Node")) {
@@ -6838,25 +6895,25 @@ calculate_hierarchy_stats <- function(node, all_codes = NULL) {
       } else {
         list()
       }
-      
+
       for (child in children) {
         traverse_node(child, depth + 1)
       }
     }
   }
-  
+
   # Start traversal from root node
   traverse_node(node)
-  
+
   # Check for unassigned codes
   unassigned_codes <- 0
   if (!is.null(all_codes)) {
     unassigned_codes <- length(setdiff(all_codes, codes_in_hierarchy))
   }
-  
+
   # Calculate average codes per theme
   avg_codes <- if (n_themes > 0) n_codes / n_themes else 0
-  
+
   # Return statistics
   list(
     total_themes = n_themes,
@@ -7751,14 +7808,14 @@ $(document).ready(function() {
 # Helper function to get all themed codes
 get_all_themed_codes <- function(node) {
   codes <- character(0)
-  
+
   traverse_node <- function(node) {
     if (is.null(node)) return()
-    
+
     if (!is.null(node$type) && node$type == "code" && !is.null(node$name)) {
       codes <<- c(codes, node$name)
     }
-    
+
     if (!is.null(node$children)) {
       children <- if (inherits(node$children, "Node")) {
         list(node$children)
@@ -7767,13 +7824,13 @@ get_all_themed_codes <- function(node) {
       } else {
         list()
       }
-      
+
       for (child in children) {
         traverse_node(child)
       }
     }
   }
-  
+
   traverse_node(node)
   return(unique(codes))
 }
@@ -7786,7 +7843,7 @@ parse_text_into_units <- function(text, unit) {
                       end = integer(0), text = character(0),
                       stringsAsFactors = FALSE))
   }
-  
+
   switch(unit,
          "sentence" = parse_sentences(text),
          "paragraph" = parse_paragraphs(text),
@@ -7797,10 +7854,10 @@ parse_text_into_units <- function(text, unit) {
 parse_sentences <- function(text) {
   # Split on sentence-ending punctuation followed by whitespace or end of string
   sentence_pattern <- "(?<=[.!?])\\s+(?=[A-Z])|(?<=[.!?])$"
-  
+
   # Find sentence boundaries
   boundaries <- gregexpr(sentence_pattern, text, perl = TRUE)[[1]]
-  
+
   if (length(boundaries) == 1 && boundaries[1] == -1) {
     # No sentence boundaries found, treat as single sentence
     return(data.frame(
@@ -7811,18 +7868,18 @@ parse_sentences <- function(text) {
       stringsAsFactors = FALSE
     ))
   }
-  
+
   # Calculate start and end positions
   starts <- c(1, boundaries + 1)
   ends <- c(boundaries, nchar(text))
-  
+
   # Extract sentence texts
   sentences <- mapply(function(s, e) substr(text, s, e), starts, ends, USE.NAMES = FALSE)
   sentences <- trimws(sentences)
-  
+
   # Remove empty sentences
   non_empty <- nchar(sentences) > 0
-  
+
   data.frame(
     unit_id = seq_along(sentences)[non_empty],
     start = starts[non_empty],
@@ -7836,22 +7893,22 @@ parse_paragraphs <- function(text) {
   # Split on double line breaks or single line breaks
   paragraphs <- strsplit(text, "\n\n|\n")[[1]]
   paragraphs <- trimws(paragraphs)
-  
+
   # Remove empty paragraphs
   paragraphs <- paragraphs[nchar(paragraphs) > 0]
-  
+
   if (length(paragraphs) == 0) {
     return(data.frame(unit_id = integer(0), start = integer(0),
                       end = integer(0), text = character(0),
                       stringsAsFactors = FALSE))
   }
-  
+
   # Calculate positions in original text
   cumulative_lengths <- cumsum(nchar(paragraphs) + 1) # +1 for line breaks
   starts <- c(1, cumulative_lengths[-length(cumulative_lengths)] + 1)
   ends <- cumulative_lengths - 1
   ends[length(ends)] <- nchar(text) # Adjust last paragraph end
-  
+
   data.frame(
     unit_id = seq_along(paragraphs),
     start = starts,
@@ -7877,19 +7934,19 @@ assign_annotations_to_units <- function(annotations, text_units) {
                       annotation_start = integer(0), annotation_end = integer(0),
                       stringsAsFactors = FALSE))
   }
-  
+
   assignments <- list()
-  
+
   for (i in seq_len(nrow(annotations))) {
     ann_start <- annotations$start[i]
     ann_end <- annotations$end[i]
     ann_code <- annotations$code[i]
-    
+
     # Find units that overlap with this annotation
     overlapping_units <- which(
       text_units$start <= ann_end & text_units$end >= ann_start
     )
-    
+
     if (length(overlapping_units) > 0) {
       for (unit_idx in overlapping_units) {
         assignments[[length(assignments) + 1]] <- data.frame(
@@ -7902,13 +7959,13 @@ assign_annotations_to_units <- function(annotations, text_units) {
       }
     }
   }
-  
+
   if (length(assignments) == 0) {
     return(data.frame(unit_id = integer(0), code = character(0),
                       annotation_start = integer(0), annotation_end = integer(0),
                       stringsAsFactors = FALSE))
   }
-  
+
   do.call(rbind, assignments)
 }
 
@@ -7916,34 +7973,34 @@ calculate_unit_cooccurrence_matrix <- function(codes, unit_assignments) {
   n_codes <- length(codes)
   co_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
                       dimnames = list(codes, codes))
-  
+
   if (nrow(unit_assignments) == 0) {
     return(co_matrix)
   }
-  
+
   # Get codes present in each unit
   units_with_codes <- split(unit_assignments$code, unit_assignments$unit_id)
-  
+
   # Count co-occurrences
   for (unit_codes in units_with_codes) {
     unique_codes_in_unit <- unique(unit_codes)
-    
+
     if (length(unique_codes_in_unit) > 1) {
       # Generate all pairs of codes in this unit
       code_pairs <- expand.grid(unique_codes_in_unit, unique_codes_in_unit,
                                 stringsAsFactors = FALSE)
-      
+
       for (j in seq_len(nrow(code_pairs))) {
         code1 <- code_pairs[j, 1]
         code2 <- code_pairs[j, 2]
-        
+
         if (code1 != code2) {
           co_matrix[code1, code2] <- co_matrix[code1, code2] + 1
         }
       }
     }
   }
-  
+
   co_matrix
 }
 
@@ -7951,36 +8008,36 @@ calculate_jaccard_similarity_matrix <- function(codes, unit_assignments) {
   n_codes <- length(codes)
   jaccard_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
                            dimnames = list(codes, codes))
-  
+
   if (nrow(unit_assignments) == 0) {
     return(jaccard_matrix)
   }
-  
+
   # Create binary presence matrix: codes x units
   units_with_codes <- split(unit_assignments$code, unit_assignments$unit_id)
   all_unit_ids <- unique(unit_assignments$unit_id)
-  
+
   code_presence <- matrix(0, nrow = n_codes, ncol = length(all_unit_ids),
                           dimnames = list(codes, as.character(all_unit_ids)))
-  
+
   for (i in seq_along(all_unit_ids)) {
     unit_id <- all_unit_ids[i]
     codes_in_unit <- unique(units_with_codes[[as.character(unit_id)]])
     code_presence[codes_in_unit, i] <- 1
   }
-  
+
   # Calculate Jaccard similarity for each pair
   for (i in 1:n_codes) {
     for (j in 1:n_codes) {
       if (i != j) {
         intersection <- sum(code_presence[i, ] & code_presence[j, ])
         union <- sum(code_presence[i, ] | code_presence[j, ])
-        
+
         jaccard_matrix[i, j] <- if (union > 0) intersection / union else 0
       }
     }
   }
-  
+
   jaccard_matrix
 }
 
@@ -7988,25 +8045,25 @@ calculate_phi_coefficient_matrix <- function(codes, unit_assignments) {
   n_codes <- length(codes)
   phi_matrix <- matrix(0, nrow = n_codes, ncol = n_codes,
                        dimnames = list(codes, codes))
-  
+
   if (nrow(unit_assignments) == 0) {
     return(phi_matrix)
   }
-  
+
   # Create binary presence matrix: codes x units
   units_with_codes <- split(unit_assignments$code, unit_assignments$unit_id)
   all_unit_ids <- unique(unit_assignments$unit_id)
   n_units <- length(all_unit_ids)
-  
+
   code_presence <- matrix(0, nrow = n_codes, ncol = n_units,
                           dimnames = list(codes, as.character(all_unit_ids)))
-  
+
   for (i in seq_along(all_unit_ids)) {
     unit_id <- all_unit_ids[i]
     codes_in_unit <- unique(units_with_codes[[as.character(unit_id)]])
     code_presence[codes_in_unit, i] <- 1
   }
-  
+
   # Calculate Phi coefficient for each pair
   for (i in 1:n_codes) {
     for (j in 1:n_codes) {
@@ -8016,16 +8073,16 @@ calculate_phi_coefficient_matrix <- function(codes, unit_assignments) {
         n10 <- sum(code_presence[i, ] & !code_presence[j, ]) # Only i present
         n01 <- sum(!code_presence[i, ] & code_presence[j, ]) # Only j present
         n00 <- sum(!code_presence[i, ] & !code_presence[j, ]) # Neither present
-        
+
         # Phi coefficient calculation
         numerator <- (n11 * n00) - (n10 * n01)
         denominator <- sqrt((n11 + n10) * (n01 + n00) * (n11 + n01) * (n10 + n00))
-        
+
         phi_matrix[i, j] <- if (denominator > 0) numerator / denominator else 0
       }
     }
   }
-  
+
   phi_matrix
 }
 
@@ -8037,9 +8094,9 @@ calculate_codes_per_unit_stats <- function(unit_assignments) {
       units_with_multiple_codes = 0
     ))
   }
-  
+
   codes_per_unit <- table(unit_assignments$unit_id)
-  
+
   list(
     mean_codes_per_unit = mean(codes_per_unit),
     max_codes_per_unit = max(codes_per_unit),
@@ -8063,14 +8120,14 @@ get_next_palette_color <- function(used_colors) {
     "#FFF2E6", "#E6F7FF", "#F0FFE6", "#FFE6F0", "#F7E6FF",
     "#FFEECC", "#CCE6FF", "#CCFFCC", "#FFCCEE", "#EECCFF"
   )
-  
+
   # Find first unused color in palette
   for (color in palette_colors) {
     if (!color %in% used_colors) {
       return(color)
     }
   }
-  
+
   # If all palette colors used, generate a random one
   return(generate_readable_color())
 }
@@ -8087,13 +8144,13 @@ get_next_palette_color <- function(used_colors) {
 generate_readable_color <- function() {
   # Generate random hue (0-360)
   hue <- runif(1, 0, 360)
-  
+
   # Set saturation between 0.3-0.6 for vibrant but not overwhelming colors
   saturation <- runif(1, 0.3, 0.6)
-  
+
   # Set lightness between 0.8-0.95 to ensure readability with black text
   lightness <- runif(1, 0.8, 0.95)
-  
+
   # Convert HSL to RGB
   hsl_to_rgb(hue, saturation, lightness)
 }
@@ -8112,7 +8169,7 @@ generate_readable_color <- function() {
 #' @keywords internal
 hsl_to_rgb <- function(h, s, l) {
   h <- h / 360
-  
+
   if (s == 0) {
     r <- g <- b <- l
   } else {
@@ -8124,15 +8181,15 @@ hsl_to_rgb <- function(h, s, l) {
       if (t < 2/3) return(p + (q - p) * (2/3 - t) * 6)
       return(p)
     }
-    
+
     q <- if (l < 0.5) l * (1 + s) else l + s - l * s
     p <- 2 * l - q
-    
+
     r <- hue_to_rgb(p, q, h + 1/3)
     g <- hue_to_rgb(p, q, h)
     b <- hue_to_rgb(p, q, h - 1/3)
   }
-  
+
   sprintf("#%02X%02X%02X", round(r * 255), round(g * 255), round(b * 255))
 }
 
@@ -8150,15 +8207,15 @@ is_color_readable <- function(color) {
   if (is.null(color) || !grepl("^#[0-9A-Fa-f]{6}$", color)) {
     return(FALSE)
   }
-  
+
   # Extract RGB values
   r <- strtoi(substr(color, 2, 3), 16L) / 255
   g <- strtoi(substr(color, 4, 5), 16L) / 255
   b <- strtoi(substr(color, 6, 7), 16L) / 255
-  
+
   # Calculate luminance
   luminance <- 0.299 * r + 0.587 * g + 0.114 * b
-  
+
   # Return TRUE if light enough for good contrast with black text
   return(luminance > 0.7)
 }
@@ -8190,7 +8247,7 @@ assign_annotations_to_position_units <- function(annotations, unit) {
                       annotation_start = integer(0), annotation_end = integer(0),
                       stringsAsFactors = FALSE))
   }
-  
+
   switch(unit,
          "sentence" = {
            # Group annotations by proximity (within 100 characters = same "sentence")
@@ -8211,19 +8268,19 @@ assign_annotations_to_position_units <- function(annotations, unit) {
            )
          }
   )
-  
+
   unit_assignments
 }
 
 assign_by_proximity <- function(annotations, max_distance) {
   # Sort annotations by start position
   sorted_annotations <- annotations[order(annotations$start), ]
-  
+
   unit_id <- 1
   current_unit_end <- sorted_annotations$end[1]
   unit_assignments <- integer(nrow(sorted_annotations))
   unit_assignments[1] <- unit_id
-  
+
   for (i in 2:nrow(sorted_annotations)) {
     if (sorted_annotations$start[i] - current_unit_end <= max_distance) {
       # Same unit
@@ -8236,7 +8293,7 @@ assign_by_proximity <- function(annotations, max_distance) {
       current_unit_end <- sorted_annotations$end[i]
     }
   }
-  
+
   data.frame(
     unit_id = unit_assignments,
     code = sorted_annotations$code,
@@ -8250,7 +8307,7 @@ assign_by_proximity <- function(annotations, max_distance) {
 calculate_cooccurrence_summary <- function(co_matrix, jaccard_matrix, phi_matrix, codes) {
   tryCatch({
     n_codes <- length(codes)
-    
+
     if (n_codes == 0 || nrow(co_matrix) == 0) {
       return(list(
         total_codes = 0,
@@ -8260,19 +8317,19 @@ calculate_cooccurrence_summary <- function(co_matrix, jaccard_matrix, phi_matrix
         significant_pairs = 0
       ))
     }
-    
+
     # Calculate maximum co-occurrence count
     max_cooccur <- if(length(co_matrix) > 0) max(co_matrix, na.rm = TRUE) else 0
-    
+
     # Calculate Jaccard statistics (excluding diagonal)
     jaccard_upper <- jaccard_matrix[upper.tri(jaccard_matrix)]
     max_jaccard <- if(length(jaccard_upper) > 0) max(jaccard_upper, na.rm = TRUE) else 0
     mean_jaccard <- if(length(jaccard_upper) > 0) mean(jaccard_upper, na.rm = TRUE) else 0
-    
+
     # Count significant Phi coefficient pairs (|phi| > 0.3)
     phi_upper <- phi_matrix[upper.tri(phi_matrix)]
     significant_pairs <- if(length(phi_upper) > 0) sum(abs(phi_upper) > 0.3, na.rm = TRUE) else 0
-    
+
     return(list(
       total_codes = n_codes,
       max_co_occurrence = max_cooccur,
@@ -8280,7 +8337,7 @@ calculate_cooccurrence_summary <- function(co_matrix, jaccard_matrix, phi_matrix
       mean_jaccard = mean_jaccard,
       significant_pairs = significant_pairs
     ))
-    
+
   }, error = function(e) {
     # Return safe defaults if calculation fails
     return(list(
@@ -8305,13 +8362,13 @@ calculate_cooccurrence_summary <- function(co_matrix, jaccard_matrix, phi_matrix
 #' @keywords internal
 code_exists_in_hierarchy <- function(node, code_name) {
   if (is.null(node) || is.null(code_name)) return(FALSE)
-  
+
   # Check if this node is the code we're looking for
   if (!is.null(node$name) && node$name == code_name &&
       !is.null(node$type) && node$type == "code") {
     return(TRUE)
   }
-  
+
   # Recursively check children
   if (!is.null(node$children)) {
     for (child in node$children) {
@@ -8320,7 +8377,7 @@ code_exists_in_hierarchy <- function(node, code_name) {
       }
     }
   }
-  
+
   return(FALSE)
 }
 
@@ -8338,13 +8395,13 @@ sync_codes_with_hierarchy <- function(rv) {
   if (is.null(rv$codes) || length(rv$codes) == 0) {
     return(rv)
   }
-  
+
   # Get all codes currently in the hierarchy
   codes_in_hierarchy <- get_all_themed_codes(rv$code_tree)
-  
+
   # Find codes that exist in rv$codes but not in hierarchy
   missing_codes <- setdiff(rv$codes, codes_in_hierarchy)
-  
+
   # Add missing codes to the root level of the hierarchy
   for (code in missing_codes) {
     new_code_node <- rv$code_tree$AddChild(code)
@@ -8352,7 +8409,7 @@ sync_codes_with_hierarchy <- function(rv) {
     new_code_node$description <- ""
     new_code_node$created <- Sys.time()
   }
-  
+
   return(rv)
 }
 
@@ -8375,14 +8432,14 @@ remove_annotation <- function(rv, start, end, code) {
     idx <- which(rv$annotations$start == start &
                    rv$annotations$end == end &
                    rv$annotations$code == code)
-    
+
     if (length(idx) > 0) {
       # Remove only the annotation, keep the code
       rv$annotations <- rv$annotations[-idx[1], ]  # Remove only first match
-      
+
       # Don't remove the code from rv$codes even if no more annotations use it
       # This preserves the code for potential future use
-      
+
       return(rv)
     }
   }

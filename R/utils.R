@@ -100,3 +100,47 @@ concatenate_memos <- function(existing_memo, new_memo) {
 #' @return Returns \code{a} if not NULL, otherwise returns \code{b}
 #' @keywords internal
 `%||%` <- function(a, b) if (!is.null(a)) a else b
+
+#' Get HTML entity for folder icon
+#'
+#' @description
+#' Returns the HTML entity code for an open folder icon
+#'
+#' @return Character string containing HTML entity
+#' @keywords internal
+get_folder_icon <- function() {
+  "&#128194;" # Folder open icon HTML entity
+}
+
+#' Get HTML entity for file icon
+#'
+#' @description
+#' Returns the HTML entity code for a file/document icon
+#'
+#' @return Character string containing HTML entity
+#' @keywords internal
+get_file_icon <- function() {
+  "&#128196;" # File icon HTML entity
+}
+
+#' Get HTML entity for closed folder icon
+#'
+#' @description
+#' Returns the HTML entity code for a closed folder icon
+#'
+#' @return Character string containing HTML entity
+#' @keywords internal
+get_closed_folder_icon <- function() {
+  "&#128193;" # Closed folder icon HTML entity
+}
+
+#' Get HTML entity for calendar icon
+#'
+#' @description
+#' Returns the HTML entity code for a calendar icon
+#'
+#' @return Character string containing HTML entity
+#' @keywords internal
+get_calendar_icon <- function() {
+  "&#128197;" # Calendar icon HTML entity
+}
