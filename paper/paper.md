@@ -85,6 +85,10 @@ textAnnotatoR is built using R [@R] and Shiny [@shiny], leveraging several key p
 
 The package follows a modular design with separated user interface, server logic, and data management components. The interactive annotation interface uses custom JavaScript handlers integrated with Shiny's reactive framework, enabling smooth user interactions while maintaining data consistency. The hierarchical code management system employs tree structures that support complex qualitative coding frameworks while ensuring efficient data storage and retrieval.
 
+While textAnnotatoR provides a robust and flexible framework for annotation and qualitative coding, it is intentionally designed with a focused scope: to support core annotation tasks rather than serve as a comprehensive project management system. The emphasis is on delivering a clean, intuitive interface that remains accessible to researchers with limited technical expertise.
+
+This deliberate design choice involves certain trade-offs. In particular, managing multiple large text files within a Shiny-based interface may result in performance constraints, especially for users with limited computing resources. As such, textAnnotatoR prioritizes robustness and maintainability over broad feature expansion. This approach ensures the tool remains dependable and user-friendly, especially in contexts where simplicity, stability, and accessibility are essential.
+
 # Examples of Use
 
 ## Practical Workflow: Analyzing Remote Work Interview Data
