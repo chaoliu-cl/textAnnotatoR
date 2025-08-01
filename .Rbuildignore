@@ -17,3 +17,5 @@
 ^paper$
 ^docs$
 ^pkgdown$
+^doc$
+^Meta$
