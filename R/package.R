@@ -22,7 +22,8 @@ if(getRversion() >= "2.15.1") {
 #' @importFrom utils tail head
 #' @importFrom magrittr %>%
 #' @importFrom shiny HTML addResourcePath column conditionalPanel div downloadButton downloadHandler
-#' @importFrom shiny fluidRow formatStyle h4 helpText hr modalButton observe p renderText span strong
-#' @importFrom shiny styleInterval tabsetPanel tagList uiOutput updateSelectInput verbatimTextOutput
+#' @importFrom shiny fluidRow h4 helpText hr modalButton observe p renderText span strong
+#' @importFrom shiny tabsetPanel tagList uiOutput updateSelectInput verbatimTextOutput
+#' @importFrom DT formatStyle styleInterval
 #' @importFrom shiny wellPanel withProgress br textOutput radioButtons
 NULL

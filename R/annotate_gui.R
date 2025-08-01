@@ -4521,7 +4521,6 @@ get_code_names <- function(node) {
 #'
 #' @return Invisible NULL, called for side effect of saving project state
 #'
-#' @importFrom utils saveRDS
 #' @importFrom tools file_path_sans_ext
 #'
 #' @keywords internal
