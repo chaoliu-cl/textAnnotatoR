@@ -129,14 +129,54 @@ annotate_gui <- function() {
 
           body { background-color: #f0f0f0; }
           .char { cursor: pointer; }
-          .highlighted { background-color: yellow; }
+          .highlighted {
+            background-color: #ffff00 !important;
+            box-shadow: 0 0 3px rgba(255, 255, 0, 0.8);
+          }
+
+          /* NEW: Selection mode styles */
+          .selection-active { cursor: crosshair !important; }
+          .selection-active .char { cursor: crosshair !important; }
+          .selection-active .char:hover {
+            background-color: rgba(255, 255, 0, 0.3);
+          }
+          .selection-mode-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1001;
+            display: none;
+          }
+          .selection-mode-indicator.active {
+            display: block;
+          }
+
+          /* Toggle button styles */
+          .btn-toggle-active {
+            background-color: #007bff !important;
+            color: white !important;
+            border-color: #0056b3 !important;
+            box-shadow: inset 0 3px 5px rgba(0,0,0,.125) !important;
+          }
+
+          .btn-toggle-inactive {
+            background-color: #f8f9fa !important;
+            color: #6c757d !important;
+            border-color: #dee2e6 !important;
+          }
+
           .code-display {
             padding: 2px 5px;
             margin-right: 5px;
             border-radius: 3px;
             font-weight: bold;
             color: black;
-            display: inline-block; /* Ensure proper display with line breaks */
+            display: inline-block;
           }
           .code-display br {
             display: block;        /* Make line breaks more prominent */
@@ -698,6 +738,19 @@ annotate_gui <- function() {
       if (is.null(rv$storage_mode)) {
         init_data_dir(session)
       }
+    })
+
+    # Initialize selection button state
+    observe({
+      # Initialize button as inactive on startup
+          runjs('
+        $(document).ready(function() {
+          if ($("#selection-indicator").length === 0) {
+            $("body").append("<div id=\\"selection-indicator\\" class=\\"selection-mode-indicator\\">Selection Mode is Inactive</div>");
+          }
+          $("#select").addClass("btn-toggle-inactive");
+        });
+      ')
     })
 
     # Handle storage confirmation - fixed by passing output parameter
@@ -3157,109 +3210,182 @@ annotate_gui <- function() {
 
     # Modify the JavaScript for text selection
     observeEvent(input$select, {
-      runjs("
-            var startChar = null;
-            var endChar = null;
-            var isSelecting = false;
-            var activeWindow = 'main'; // Track which window is active for selection
+      runjs('
+        // Global variables for selection state
+        var selectionState = {
+          isActive: false,
+          startChar: null,
+          endChar: null,
+          isSelecting: false
+        };
 
-            function initializeSelection() {
-              // Remove existing event listeners
-              $('#text_display, #floating_text_content').off('mousedown mousemove');
-              $(document).off('mouseup');
+        // Check current state and toggle
+        var currentlyActive = $("#text_display, #floating_text_content").hasClass("selection-active");
+        var newState = !currentlyActive;
 
-              // Add mousedown event listener for character selection
-              $('#text_display, #floating_text_content').on('mousedown', '.char', function(e) {
-                e.preventDefault();
-                if (!isSelecting) return;
+        // Initialize selection functionality
+        function initializeTextSelection() {
+          // Remove any existing event listeners to prevent duplicates
+          $(document).off("mousedown.textselection mousemove.textselection mouseup.textselection");
+          $("#text_display, #floating_text_content").off("mousedown.textselection mousemove.textselection");
 
-                startChar = endChar = parseInt($(this).attr('id').replace('char_', '').replace('float_char_', ''));
-                updateHighlight();
-              });
+          // Add namespaced event listeners
+          $(document).on("mousedown.textselection", "#text_display .char, #floating_text_content .char", function(e) {
+            if (!selectionState.isActive) return;
 
-              // Add mousemove event listener for selection dragging
-              $('#text_display, #floating_text_content').on('mousemove', '.char', function(e) {
-                if (e.buttons === 1 && isSelecting) {
-                  endChar = parseInt($(this).attr('id').replace('char_', '').replace('float_char_', ''));
-                  updateHighlight();
-                }
-              });
+            e.preventDefault();
+            e.stopPropagation();
 
-              // Add mouseup event listener to finalize selection
-              $(document).on('mouseup', function() {
-                if (isSelecting && startChar !== null && endChar !== null) {
-                  updateHighlight();
-                  updateShiny();
-                  isSelecting = false;
-                }
-              });
+            try {
+              var charId = $(this).attr("id");
+              if (!charId) return;
+
+              var charNum = parseInt(charId.replace(/^(char_|float_char_)/, ""));
+              if (isNaN(charNum)) return;
+
+              selectionState.startChar = charNum;
+              selectionState.endChar = charNum;
+              selectionState.isSelecting = true;
+
+              updateHighlight();
+            } catch (error) {
+              console.error("Error in mousedown handler:", error);
+            }
+          });
+
+          $(document).on("mousemove.textselection", "#text_display .char, #floating_text_content .char", function(e) {
+            if (!selectionState.isActive || !selectionState.isSelecting) return;
+
+            try {
+              var charId = $(this).attr("id");
+              if (!charId) return;
+
+              var charNum = parseInt(charId.replace(/^(char_|float_char_)/, ""));
+              if (isNaN(charNum)) return;
+
+              selectionState.endChar = charNum;
+              updateHighlight();
+            } catch (error) {
+              console.error("Error in mousemove handler:", error);
+            }
+          });
+
+          $(document).on("mouseup.textselection", function(e) {
+            if (!selectionState.isActive || !selectionState.isSelecting) return;
+
+            try {
+              selectionState.isSelecting = false;
+
+              if (selectionState.startChar !== null && selectionState.endChar !== null) {
+                updateShinySelection();
+              }
+            } catch (error) {
+              console.error("Error in mouseup handler:", error);
+            }
+          });
+        }
+
+        function updateHighlight() {
+          try {
+            // Clear all existing highlights
+            $(".char").removeClass("highlighted");
+
+            if (selectionState.startChar === null || selectionState.endChar === null) {
+              return;
             }
 
-            function updateHighlight() {
-              if (startChar === null || endChar === null) return;
+            var start = Math.min(selectionState.startChar, selectionState.endChar);
+            var end = Math.max(selectionState.startChar, selectionState.endChar);
 
-              // Clear all highlights first
-              $('.char').removeClass('highlighted');
+            // Apply highlights to the range
+            for (var i = start; i <= end; i++) {
+              $("#char_" + i + ", #float_char_" + i).addClass("highlighted");
+            }
+          } catch (error) {
+            console.error("Error updating highlights:", error);
+          }
+        }
 
-              var start = Math.min(startChar, endChar);
-              var end = Math.max(startChar, endChar);
+        function updateShinySelection() {
+          try {
+            if (selectionState.startChar === null || selectionState.endChar === null) {
+              return;
+            }
 
-              // Update highlights in both windows - accounting for line breaks
-              for (var i = start; i <= end; i++) {
-                $('#char_' + i + ', #float_char_' + i).addClass('highlighted');
+            var start = Math.min(selectionState.startChar, selectionState.endChar);
+            var end = Math.max(selectionState.startChar, selectionState.endChar);
+
+            // Get the selected text by collecting text from highlighted characters
+            var selectedText = "";
+            for (var i = start; i <= end; i++) {
+              var charElement = $("#char_" + i);
+              if (charElement.length > 0) {
+                selectedText += charElement.text();
               }
             }
 
-            function updateShiny() {
-              // Get the text from highlighted spans, respecting line breaks
-              var selectedText = '';
-              var start = Math.min(startChar, endChar);
-              var end = Math.max(startChar, endChar);
-
-              // We need to collect the text properly respecting the DOM structure
-              // with <br> tags which might be present between character spans
-              for (var i = start; i <= end; i++) {
-                var charSpan = $('#char_' + i);
-                if (charSpan.length) {
-                  selectedText += charSpan.text();
-                }
-              }
-
-              Shiny.setInputValue('selected_text', {
-                text: selectedText,
-                start: start,
-                end: end
-              });
-            }
-
-            // Add event listener for floating window toggle
-            $('#floating_text_window').on('show hide', function() {
-              setTimeout(initializeSelection, 100); // Short delay to ensure DOM is updated
+            // Send selection to Shiny
+            Shiny.setInputValue("selected_text", {
+              text: selectedText,
+              start: start,
+              end: end
             });
 
-            Shiny.addCustomMessageHandler('startSelecting', function(message) {
-              isSelecting = true;
-              initializeSelection();
-            });
+            console.log("Selection sent to Shiny:", {text: selectedText, start: start, end: end});
+          } catch (error) {
+            console.error("Error updating Shiny selection:", error);
+          }
+        }
 
-            Shiny.addCustomMessageHandler('clearSelection', function(message) {
-              $('.char').removeClass('highlighted');
-              startChar = endChar = null;
-              isSelecting = false;
-              Shiny.setInputValue('selected_text', null);
-            });
+        function toggleSelectionMode(active) {
+          selectionState.isActive = active;
 
-            // Initialize selection handlers when page loads
-            $(document).ready(function() {
-              initializeSelection();
+          if (active) {
+            $("#text_display, #floating_text_content").addClass("selection-active");
+            $("#selection-indicator").addClass("active");
+            $("#selection-indicator").text("Selection Mode Active - Click and drag to select text");
+            $("#select").addClass("btn-toggle-active").removeClass("btn-toggle-inactive");
+          } else {
+            $("#text_display, #floating_text_content").removeClass("selection-active");
+            $("#selection-indicator").removeClass("active");
+            $("#selection-indicator").text("Selection Mode is Inactive");
+            $("#select").addClass("btn-toggle-inactive").removeClass("btn-toggle-active");
+            clearSelection();
+          }
+        }
 
-              // Add toggle button handler
-              $('#toggle_text_window').click(function() {
-                setTimeout(initializeSelection, 100);
-              });
-            });
-      ")
-      session$sendCustomMessage("startSelecting", list())
+        function clearSelection() {
+          $(".char").removeClass("highlighted");
+          selectionState.startChar = null;
+          selectionState.endChar = null;
+          selectionState.isSelecting = false;
+          Shiny.setInputValue("selected_text", null);
+        }
+
+        // Add selection indicator if it doesnt exist
+        if ($("#selection-indicator").length === 0) {
+          $("body").append("<div id=\\"selection-indicator\\" class=\\"selection-mode-indicator\\">Selection Mode is Inactive</div>");
+        }
+
+        // Initialize and toggle selection mode
+        initializeTextSelection();
+        toggleSelectionMode(newState);
+
+        // Custom message handlers for Shiny integration
+        Shiny.addCustomMessageHandler("startSelecting", function(message) {
+          toggleSelectionMode(true);
+        });
+
+        Shiny.addCustomMessageHandler("clearSelection", function(message) {
+          clearSelection();
+        });
+
+        Shiny.addCustomMessageHandler("refreshDisplay", function(message) {
+          setTimeout(function() {
+            initializeTextSelection();
+          }, 100);
+        });
+      ')
     })
 
     # Handle text selection
@@ -3276,6 +3402,19 @@ annotate_gui <- function() {
       rv$selected_end <- NULL
       updateTextInput(session, "code", value = "")
       updateTextAreaInput(session, "memo", value = "")
+      runjs('
+        $(".char").removeClass("highlighted");
+        $("#text_display, #floating_text_content").removeClass("selection-active");
+        $("#selection-indicator").removeClass("active");
+        $("#selection-indicator").text("Selection Mode is Inactive");
+        $("#select").addClass("btn-toggle-inactive").removeClass("btn-toggle-active");
+        if (typeof selectionState !== "undefined") {
+          selectionState.isActive = false;
+          selectionState.startChar = null;
+          selectionState.endChar = null;
+          selectionState.isSelecting = false;
+        }
+      ')
       session$sendCustomMessage("clearSelection", list())
     })
 
