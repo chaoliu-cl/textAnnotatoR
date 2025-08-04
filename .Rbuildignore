@@ -17,12 +17,6 @@
 ^paper$
 ^docs$
 ^pkgdown$
+^doc$
+^Meta$
 ^CODE_OF_CONDUCT\.md$
-^coverage$
-^node_modules$
-^package\.json$
-^package-lock\.json$
-^tools$
-^\.Rhistory$
-^MD5$
-^codecov\.yml$
