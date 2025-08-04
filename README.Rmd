@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 # textAnnotatoR: Interactive Text Annotation Tool for R
 
 [![R-CMD-check](https://github.com/chaoliu-cl/textAnnotatoR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/chaoliu-cl/textAnnotatoR/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/chaoliu-cl/textAnnotatoR/branch/main/graph/badge.svg?token=a8a91118-d5d9-4267-a0fa-077c0fc6e3f2)](https://codecov.io/gh/chaoliu-cl/textAnnotatoR?branch=main)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/textAnnotatoR)](https://CRAN.R-project.org/package=textAnnotatoR)
 [![Lifecycle:
@@ -129,6 +130,10 @@ Export your annotations in various formats:
 - R version 4.0.0 or higher
 - Shiny and its dependencies
 - A modern web browser
+
+## Testing
+
+The package includes comprehensive automated tests for core functionality, data processing, and utility functions. While testing interactive Shiny components presents unique challenges, the package maintains good test coverage for the underlying logic and data manipulation functions that power the user interface. Interactive components are validated through manual testing and user feedback.
 
 ## Contributing
 

@@ -52,7 +52,7 @@ textAnnotatoR addresses these gaps by providing comprehensive QDA functionality 
 
 **Unified analytical workflow**: Researchers can conduct qualitative coding, generate quantitative summaries of coding patterns, create publication-ready visualizations, and perform mixed-methods analysis within a single environment, eliminating the need to export and import data across multiple platforms.
 
-**Reproducible research**: All analytical steps can be documented in R scripts, enabling complete reproducibility of both qualitative coding decisions and subsequent analyses—a critical requirement for transparent and rigorous research.
+**Reproducible research**: Unlike commercial QDA software that stores projects in proprietary binary formats, textAnnotatoR saves all project data (annotations, codes, hierarchies, and memos) in open, documented formats (RDS, CSV, JSON). This enables researchers to: (1) programmatically access and manipulate coding decisions through R scripts, (2) version control entire analytical workflows using Git or similar systems, (3) share complete analytical pipelines that others can execute to verify results, and (4) integrate qualitative coding steps with quantitative analysis in a single reproducible document using R Markdown. For example, a researcher can write a script that loads coded data, calculates inter-rater reliability, generates co-occurrence matrices, and produces publication-ready visualizations—all with full transparency and reproducibility that commercial tools cannot match due to their closed-source nature and proprietary data formats.
 
 **Advanced statistical integration**: Researchers can immediately apply R's extensive statistical capabilities to coded data, including inter-rater reliability calculations, pattern analysis, and integration with survey or experimental data.
 
@@ -171,7 +171,8 @@ textAnnotatoR provides built-in analytical tools for examining coding patterns. 
 
  Co-occurrence analysis helps uncover potential relationships between different concepts by revealing codes that frequently appear together. For example, "Home Setup" and "Save Time" often co-occur, suggesting that participants associate their home work environment with increased efficiency. In contrast, the frequent co-occurrence of "Boundary Issues" and "Family Time" points to an underlying tension between personal life and work (see Figure 8).
 
-![](Fig8.png)
+<img src="Fig8.png" alt="Network visualization of co-occurring codes" width="400"/>
+
 **Figure 8**: Network visualization of co-ocurring codes.
 
 *Note*: Node size reflects total co-occurrences. Line thickness indicates Jaccard similarity strength. Line opacity shows phi coefficient magnitude. 

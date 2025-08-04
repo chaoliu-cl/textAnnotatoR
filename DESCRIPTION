@@ -25,12 +25,7 @@ Imports:
     jsonlite,
     DT,
     readtext,
-    magrittr,
-    tools,
-    utils,
-    stats,
-    grDevices,
-    graphics
+    magrittr
 Suggests:
     testthat (>= 3.0.0),
     knitr,

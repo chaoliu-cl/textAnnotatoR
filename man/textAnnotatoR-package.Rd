@@ -5,7 +5,7 @@
 \alias{textAnnotatoR-package}
 \title{textAnnotatoR: Interactive Text Annotation Tool with 'shiny' GUI}
 \description{
-A comprehensive text annotation tool built with 'shiny'. Provides an interactive graphical user interface for coding text documents, managing code hierarchies, creating memos, and analyzing coding patterns. Features include code co-occurrence analysis, visualization of coding patterns, comparison of multiple coding sets, and export capabilities. Supports collaborative qualitative research through standardized annotation formats and analysis tools.
+A lightweight and focused text annotation tool built with 'shiny'. Provides an interactive graphical user interface for coding text documents, managing code hierarchies, creating memos, and analyzing coding patterns. Features include code co-occurrence analysis, visualization of coding patterns, comparison of multiple coding sets, and export capabilities. Supports collaborative qualitative research through standardized annotation formats and analysis tools.
 }
 \seealso{
 Useful links:

@@ -11,7 +11,7 @@
 ^\.github/workflows/
 ^_pkgdown\.yml$
 ^vignettes/.*\.pdf$
-^vignettes/.*\.html$ 
+^vignettes/.*\.html$
 ^vignettes/cache/
 ^vignettes/figure/
 ^paper$
@@ -19,3 +19,4 @@
 ^pkgdown$
 ^doc$
 ^Meta$
+^CODE_OF_CONDUCT\.md$
