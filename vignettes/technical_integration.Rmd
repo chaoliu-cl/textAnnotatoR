@@ -10,7 +10,7 @@ vignette: >
   %\VignetteIndexEntry{Technical Integration - Using textAnnotatoR with Other R Tools}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-  %\VignetteDepends{dplyr, ggplot2}
+  %\VignetteDepends{dplyr, ggplot2, quanteda}
 ---
 
 ```{r setup, include=FALSE}
@@ -111,7 +111,7 @@ This structure makes it readily compatible with standard R data manipulation too
 
 The [quanteda](https://quanteda.io/) package is a powerful framework for text analysis. Here's how you can combine textAnnotatoR annotations with quanteda:
 
-```{r eval=TRUE}
+```{r, eval = requireNamespace("quanteda", quietly = TRUE)}
 library(quanteda)
 library(quanteda.textstats)
 library(dplyr)
