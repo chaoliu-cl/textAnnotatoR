@@ -150,7 +150,7 @@ Now let's start coding our interview text:
 5. Add a memo: "Initial challenge in transition to remote work"
 6. Click "Save" to save the code
 
-<img src="../man/figures/Save_code_gif.gif" width="700" />
+<img src="../man/figures/Save_code.gif" width="700" />
 
 Continue this process for other notable segments in the text. For example:
 
