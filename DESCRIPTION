@@ -1,8 +1,8 @@
 Package: textAnnotatoR
 Type: Package
 Title: Interactive Text Annotation Tool with 'shiny' GUI
-Version: 1.0.0
-Date: 2024-10-25
+Version: 1.0.1
+Date: 2025-8-29
 Authors@R: person("Chao Liu", email = "chaoliu@cedarville.edu", role = c("aut", "cre", "cph"), comment = c(ORCID = "0000-0002-9979-8272"))
 Description: A lightweight and focused text annotation tool built with 'shiny'. Provides an 
     interactive graphical user interface for coding text documents,
